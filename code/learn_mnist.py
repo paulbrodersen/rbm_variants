@@ -163,6 +163,9 @@ if __name__ == '__main__':
     batch_size = 100
     inputs_train  = make_batches(inputs_train, batch_size)
 
+    total_epochs = 2
+    test_at = np.r_[[0, 1, 3, 6, 10, 30, 60, 100, 300], np.arange(1, total_epochs+1) * 600] # in batches
+
     # --------------------------------------------------------------------------------
     # define experiments
 
@@ -176,9 +179,9 @@ if __name__ == '__main__':
     experiments = []
     experiments.append([RestrictedBoltzmannMachine, network_layout, dict(cd=3, eta=0.01),                                              '#1f77b4',   'Standard RBM',              'rbm'])
     experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01),                                              '#9467bd',   'Directed RBM',              'directed'])
-    experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=False, update_backward=True),  '#d62728',   r'Learn w$_{B}$ and biases', 'update_wb_and_biases'])
-    experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=True, update_backward=False),  '#ff7f0e',   r'Learn w$_{F}$ and biases', 'update_wf_and_biases'])
-    experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=False, update_backward=False), 'lightgray', r'Learn only biases',        'update_biases'])
+    # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=False, update_backward=True),  '#d62728',   r'Learn w$_{B}$ and biases', 'update_wb_and_biases'])
+    # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=True, update_backward=False),  '#ff7f0e',   r'Learn w$_{F}$ and biases', 'update_wf_and_biases'])
+    # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=False, update_backward=False), 'lightgray', r'Learn only biases',        'update_biases'])
 
     # --------------------------------------------------------------------------------
     # optimize learning rate
@@ -201,8 +204,8 @@ if __name__ == '__main__':
     for model, init_params, train_params, color, label, fname in experiments:
 
         test_params = dict(loss_function=get_mean_squared_error,
-                           plot_function=None)
-                           # plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/'+fname+'--'))
+                           # plot_function=None)
+                           plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/'+fname+'--'))
 
         loss, samples = characterise_model(model             = model,
                                            init_params       = init_params,
@@ -210,8 +213,8 @@ if __name__ == '__main__':
                                            test_params       = test_params,
                                            inputs_train      = inputs_train,
                                            inputs_test       = inputs_test,
-                                           test_every        = 1*60,
-                                           total_batches     = 5*600,
+                                           test_at           = test_at,
+                                           total_batches     = test_at[-1],
                                            total_repetitions = 1)
 
         np.savez('../data/results--' + fname,
@@ -222,7 +225,7 @@ if __name__ == '__main__':
         )
 
         # plot loss
-        samples += 1 # show first data point if x-axis is log-scaled
+        samples += 1 # show first data point if x-axis is log-scaled and first test is at samples batches = 0
         ax.errorbar(x=samples, y=loss.mean(axis=0),
                     yerr=loss.std(axis=0), errorevery=1,
                     color=color, ecolor=color, alpha=0.9,
@@ -238,9 +241,10 @@ if __name__ == '__main__':
                     fontsize='xx-small')
 
         # layout plot
-        # ax.set_xscale('log')
-        ax.set_yscale('log')
-        # ax.set_ylim(0, 1)
+        ax.set_xscale('log')
+        # ax.set_yscale('log')
+        ax.set_ylim(0, 0.5)
+        # ax.set_ylim(0.01, 0.5)
         ax.set_xlabel('Training samples')
         ax.set_ylabel('Mean squared error')
         ax.legend(loc=1, fontsize='xx-small')
