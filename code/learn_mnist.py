@@ -156,9 +156,8 @@ if __name__ == '__main__':
     inputs_train, _ = load_mnist(ddir, 'train')
     inputs_test, _ = load_mnist(ddir, 'test')
 
-    extremum = 10
-    inputs_train = rescale(inputs_train, -extremum, extremum)
-    inputs_test  = rescale(inputs_test,  -extremum, extremum)
+    inputs_train = rescale(inputs_train, 0., 1.)
+    inputs_test  = rescale(inputs_test,  0., 1.)
 
     batch_size = 100
     inputs_train  = make_batches(inputs_train, batch_size)

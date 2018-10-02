@@ -80,7 +80,7 @@ class RestrictedBoltzmannMachine(object):
         # initialize activities
         total_samples = len(batch)
         activities = [np.zeros((total_samples, layer.count)) for layer in layers]
-        activities[0] = layers[0].activation_function(batch + layers[0].biases)
+        activities[0] = batch
 
         # run CD Gibbs sampling steps
         for ii in range(cd):
