@@ -49,14 +49,14 @@ class RestrictedBoltzmannMachine(object):
     def __repr__(self):
         return "RBM"
 
-    def __init__(self, layers):
+    def __init__(self, layers, scale_weights_by=1.):
         self.layers  = layers
-        self._initialize_weights()
+        self._initialize_weights(scale_weights_by=scale_weights_by)
         self._initialize_biases()
 
-    def _initialize_weights(self):
+    def _initialize_weights(self, scale_weights_by=1.):
         for ii in range(len(self.layers)-1):
-            w = np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
+            w = scale_weights_by * np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
             self.layers[ii].forward_weights = w
             self.layers[ii+1].backward_weights = w.T
 
@@ -214,11 +214,10 @@ class DirectedRBM(RestrictedBoltzmannMachine):
     def __repr__(self):
         return "Directed RBM"
 
-    def _initialize_weights(self):
+    def _initialize_weights(self, scale_weights_by=1.):
         for ii in range(len(self.layers)-1):
-            w1 = np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
-            w2 = np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
-            # TODO: rescale w (potentially)
+            w1 = scale_weights_by * np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
+            w2 = scale_weights_by * np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
             self.layers[ii].forward_weights = w1
             self.layers[ii+1].backward_weights = w2.T
 
