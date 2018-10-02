@@ -119,8 +119,8 @@ def make_diagnostic_plots(forward_pass_activities, backward_pass_activities, lay
     # --------------------------------------------------------------------------------
     # reconstructions
 
-    inputs = forward_pass_activities[0] # actually inputs transformed by non-linearity
-    outputs = backward_pass_activities[0] # reconstructions
+    inputs = forward_pass_activities[0]
+    outputs = backward_pass_activities[0]
     image_shape = (10, 10) # in tiles
     tile_shape = (28, 28) # in pixels
     total_samples  = image_shape[0] * image_shape[1]
