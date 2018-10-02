@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+import time
 
 from sys import stdout
 
@@ -127,6 +128,8 @@ def characterise_model(model, init_params,
 
     for rep in range(total_repetitions):
 
+        tic = time.time()
+
         ann = model(**init_params)
 
         if rep == 0: # print model specifications
@@ -159,6 +162,10 @@ def characterise_model(model, init_params,
             stdout.flush()
 
         stdout.write('\n')
+
+        toc = time.time()
+        stdout.write('Time elapsed: {:.1f} s\n'.format(toc-tic))
+
         stdout.flush()
 
         anns.append(ann)
