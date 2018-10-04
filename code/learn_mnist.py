@@ -263,7 +263,7 @@ if __name__ == '__main__':
         # layout plot
         ax.set_xscale('log')
         # ax.set_yscale('log')
-        ax.set_ylim(0, 0.5)
+        ax.set_ylim(0, 0.55)
         # ax.set_ylim(0.01, 0.5)
         ax.set_xlabel('Training samples')
         ax.set_ylabel('Mean squared error')
