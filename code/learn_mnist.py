@@ -98,6 +98,27 @@ def make_diagnostic_plots(forward_pass_activities, backward_pass_activities, lay
     fig.savefig(fdir + "weight_distribution.svg")
 
     # --------------------------------------------------------------------------------
+    # weight alignment
+
+    fig, axes = plt.subplots(total_layers-1, 1)
+    for ii in range(total_layers-1):
+
+        if total_layers-1 == 1:
+            ax = axes
+        else:
+            ax = axes[ii]
+
+        ax.plot(layers[ii].forward_weights.ravel(), layers[ii+1].backward_weights.transpose().ravel(), '.', markersize=1, color=color, alpha=0.1)
+
+    ax.set_xlabel('Forward weight value [AU]')
+    ax.set_ylabel('Backward weight value [AU]')
+
+    fig.tight_layout()
+    # fig.savefig(fdir + "weight_alignment.pdf")
+    fig.savefig(fdir + "weight_alignment.png")
+    fig.savefig(fdir + "weight_alignment.svg")
+
+    # --------------------------------------------------------------------------------
     # biases
 
     extremum = 15
