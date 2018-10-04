@@ -10,6 +10,21 @@ from copy import deepcopy
 from utils import get_cosine_similarity, get_mean_squared_error
 
 
+def logistic_function(x):
+    """
+    Numerically stable sigmoid.
+    https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
+
+    Maps x values in the range [-inf, +inf] to y values in the range [0, 1].
+    """
+    positive = x >= 0.
+    negative = ~positive
+    y = np.zeros_like(x)
+    y[positive] = 1.                  / (1. + np.exp(-x[positive]))
+    y[negative] = np.exp(x[negative]) / (np.exp(x[negative]) + 1.)
+    return y
+
+
 class LogisticLayer(object):
 
     def __repr__(self):
@@ -19,18 +34,7 @@ class LogisticLayer(object):
         self.count = count
 
     def activation_function(self, x):
-        """
-        Numerically stable sigmoid.
-        https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
-
-        Maps x values in the range [-inf, +inf] to y values in the range [0, 1].
-        """
-        positive = x >= 0.
-        negative = ~positive
-        y = np.zeros_like(x)
-        y[positive] = 1.                  / (1. + np.exp(-x[positive]))
-        y[negative] = np.exp(x[negative]) / (np.exp(x[negative]) + 1.)
-        return y
+        return logistic_function(x)
 
 
 class BoltzmannLayer(LogisticLayer):
