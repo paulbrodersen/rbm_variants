@@ -144,6 +144,11 @@ class RestrictedBoltzmannMachine(object):
         return visible, hidden
 
     def _apply_transform(inputs, layers):
+        """
+        Apply layer non-linearities to a set of inputs.
+        The resulting outputs can be used to train the next (un-trained) pair of layers.
+        """
+
         # initialize activities
         total_batches, total_samples, _ = inputs.shape
         activities = [np.zeros((total_samples, layer.count)) for layer in layers]
