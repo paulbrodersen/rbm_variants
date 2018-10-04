@@ -245,7 +245,9 @@ if __name__ == '__main__':
         )
 
         # plot loss
-        samples += 1 # show first data point if x-axis is log-scaled and first test is at samples batches = 0
+        if samples[0] == 0:
+            samples[0] = 1 # show first data point if x-axis is log-scaled
+
         ax.errorbar(x=samples, y=loss.mean(axis=0),
                     yerr=loss.std(axis=0), errorevery=1,
                     color=color, ecolor=color, alpha=0.9,
