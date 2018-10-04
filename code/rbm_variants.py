@@ -60,9 +60,14 @@ class RestrictedBoltzmannMachine(object):
 
     def _initialize_weights(self, scale_weights_by=1.):
         for ii in range(len(self.layers)-1):
-            w = np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
-            self.layers[ii].forward_weights    = scale_weights_by * w
-            self.layers[ii+1].backward_weights = scale_weights_by * w.T
+            w = self._initialize_weight_matrix(self.layers[ii].count,
+                                               self.layers[ii+1].count,
+                                               scale_weights_by=scale_weights_by)
+            self.layers[ii].forward_weights    = w
+            self.layers[ii+1].backward_weights = w.T
+
+    def _initialize_weight_matrix(self, total_sources, total_targets, scale_weights_by=1.):
+        return scale_weights_by * np.random.randn(total_sources, total_targets)
 
     def _initialize_biases(self):
         for ii in range(len(self.layers)):
@@ -220,17 +225,22 @@ class DirectedRBM(RestrictedBoltzmannMachine):
 
     def __init__(self, layers, scale_forward_weights_by=1., scale_backward_weights_by=1.):
         self.layers  = layers
-        self._initialize_weights(scale_forward_weights_by=scale_forward_weights_by, scale_backward_weights_by=scale_backward_weights_by)
+        self._initialize_weights(scale_forward_weights_by=scale_forward_weights_by,
+                                 scale_backward_weights_by=scale_backward_weights_by)
         self._initialize_biases()
 
     def _initialize_weights(self, scale_forward_weights_by=1., scale_backward_weights_by=1.):
         for ii in range(len(self.layers)-1):
-            w1 = np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
-            w2 = np.random.randn(self.layers[ii].count, self.layers[ii+1].count)
-            self.layers[ii].forward_weights    = scale_forward_weights_by  * w1
-            self.layers[ii+1].backward_weights = scale_backward_weights_by * w2.T
-
     def _update_weights(self, activities_0, activities_cd, layers, eta,
+            w1 = self._initialize_weight_matrix(self.layers[ii].count,
+                                                self.layers[ii+1].count,
+                                                scale_weights_by=scale_forward_weights_by)
+            w2 = self._initialize_weight_matrix(self.layers[ii].count,
+                                                self.layers[ii+1].count,
+                                                scale_weights_by=scale_backward_weights_by)
+            self.layers[ii].forward_weights    = w1
+            self.layers[ii+1].backward_weights = w2.T
+
                         update_forward=True, update_backward=True, *args, **kwargs):
 
         for ii in range(len(layers)-1):
