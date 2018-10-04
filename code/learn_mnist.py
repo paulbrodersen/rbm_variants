@@ -2,6 +2,9 @@
 
 """
 Train RBM variants to reconstruct MNIST digits
+
+TODO:
+- sparse networks, show that weights from bidirectional connections are not systematically larger than weights in unidirectional connections
 """
 
 import numpy as np
@@ -9,7 +12,7 @@ import matplotlib.pyplot as plt
 import mnist
 
 from functools import partial
-from rbm_variants import BoltzmannLayer, RestrictedBoltzmannMachine, DirectedRBM
+from rbm_variants import BoltzmannLayer, RestrictedBoltzmannMachine, DirectedRBM, SparseRBM, SparseDirectedRBM
 from utils import rescale, make_batches, characterise_model, subplots, get_unblockedshaped, get_cosine_similarity, get_mean_squared_error
 
 # styling
@@ -89,8 +92,8 @@ def make_diagnostic_plots(forward_pass_activities, backward_pass_activities, lay
     ax2.set_xlabel('Weight value [AU]')
 
     for ax in axes.ravel():
-        # ax.set_xlim(-10, 10)
-        ax.set_xlim(-5, 5)
+        # ax.set_xlim(-5, 5)
+        ax.set_xlim(-10, 10)
         ax.set_ylim(0, 120 * 1e+3)
 
     fig.tight_layout()
@@ -121,16 +124,16 @@ def make_diagnostic_plots(forward_pass_activities, backward_pass_activities, lay
     # --------------------------------------------------------------------------------
     # biases
 
-    extremum = 15
+    extremum = 10
     fig, axes = plt.subplots(total_layers, sharex=True, sharey=True)
     for ii in range(total_layers):
         # axes[ii].hist(layers[ii].biases, color=color)
-        axes[ii].hist(layers[ii].biases, bins=np.linspace(-extremum, extremum, 31), color=color)
+        axes[ii].hist(layers[ii].biases, bins=np.linspace(-extremum, extremum, 2*extremum+1), color=color)
         axes[ii].set_ylabel('Number of biases (layer {})'.format(ii))
     axes[ii].set_xlabel('Bias value [AU]')
 
     for ax in axes.ravel():
-        ax.set_xlim(-extremum, extremum)
+        # ax.set_xlim(-extremum, extremum)
         ax.set_ylim(0, 400)
 
     fig.tight_layout()
@@ -183,7 +186,7 @@ if __name__ == '__main__':
     batch_size = 100
     inputs_train  = make_batches(inputs_train, batch_size)
 
-    total_epochs = 2
+    total_epochs = 10
     test_at = np.r_[[0, 1, 3, 6, 10, 30, 60, 100, 300], np.arange(1, total_epochs+1) * 600] # in batches
 
     # --------------------------------------------------------------------------------
@@ -197,14 +200,14 @@ if __name__ == '__main__':
 
     # parameters
     experiments = []
-    experiments.append([RestrictedBoltzmannMachine, network_layout, dict(cd=3, eta=0.01),                                              '#1f77b4',   'Standard RBM',              'rbm'])
-    experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01),                                              '#9467bd',   'Directed RBM',              'directed'])
+    # experiments.append([RestrictedBoltzmannMachine, network_layout, dict(cd=3, eta=0.01),                                              '#1f77b4',   'Standard RBM',              'rbm'])
+    # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01),                                              '#9467bd',   'Directed RBM',              'directed'])
     # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=False, update_backward=True),  '#d62728',   r'Learn w$_{B}$ and biases', 'update_wb_and_biases'])
-    # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=True, update_backward=False),  '#ff7f0e',   r'Learn w$_{F}$ and biases', 'update_wf_and_biases'])
+    # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=True,  update_backward=False), '#ff7f0e',   r'Learn w$_{F}$ and biases', 'update_wf_and_biases'])
     # experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=0.01, update_forward=False, update_backward=False), 'lightgray', r'Learn only biases',        'update_biases'])
 
-    # --------------------------------------------------------------------------------
-    # optimize learning rate
+    # # --------------------------------------------------------------------------------
+    # # optimize learning rate
 
     # colors = ['green', 'lime', 'turquoise', 'blue', 'violet', 'red', 'orange', 'yellow']
     # etas   = [   0.001,   0.005,   0.01,        0.05,    0.1,      0.5,    1.,       5.]
@@ -213,6 +216,62 @@ if __name__ == '__main__':
     #     experiments.append([RestrictedBoltzmannMachine, network_layout, dict(cd=3, eta=eta),                                             color, r'Standard RBM ($\eta = {}$)'.format(eta),          'rbm'])
     #     experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=eta, update_forward=False, update_backward=True), color, r'Learn w$_{B}$ and biases ($\eta = {}$)'.format(eta), 'backward_rbm'])
     #     experiments.append([DirectedRBM,                network_layout, dict(cd=3, eta=eta, update_forward=True, update_backward=False), color, r'Learn w$_{F}$ and biases ($\eta = {}$)'.format(eta),  'forward_rbm'])
+
+    # # --------------------------------------------------------------------------------
+    # # optimize scale of initial weights
+
+    # experiments.append([RestrictedBoltzmannMachine, dict(scale_weights_by=10.0,  **network_layout), dict(cd=3, eta=0.01), 'darkblue',  'Initial weight scale = 10.',   'swb_10'])
+    # experiments.append([RestrictedBoltzmannMachine, dict(scale_weights_by= 1.0,  **network_layout), dict(cd=3, eta=0.01), 'blue',      'Initial weight scale =  1.',   'swb_1'])
+    # experiments.append([RestrictedBoltzmannMachine, dict(scale_weights_by= 0.1,  **network_layout), dict(cd=3, eta=0.01), 'skyblue',   'Initial weight scale =  0.1',  'swb_01']) # <-- best 3 epochs
+    # experiments.append([RestrictedBoltzmannMachine, dict(scale_weights_by= 0.01, **network_layout), dict(cd=3, eta=0.01), 'lightblue', 'Initial weight scale =  0.01', 'swb_001'])
+
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by=10.0, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01, update_forward=False, update_backward=True), 'darkblue',  r'Learn w$_{B}$ and biases', 'update_wb_and_biases_1'])
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 1.0, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01, update_forward=False, update_backward=True), 'blue',      r'Learn w$_{B}$ and biases', 'update_wb_and_biases_2'])
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 0.1, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01, update_forward=False, update_backward=True), 'lightblue', r'Learn w$_{B}$ and biases', 'update_wb_and_biases_3'])
+
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 1.0, scale_backward_weights_by=1.0, **network_layout), dict(cd=3, eta=0.01, update_forward=False, update_backward=True), 'darkblue',  r'Learn w$_{B}$ and biases', 'update_wb_and_biases_1'])
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 1.0, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01, update_forward=False, update_backward=True), 'blue',      r'Learn w$_{B}$ and biases', 'update_wb_and_biases_2'])
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 1.0, scale_backward_weights_by=0.01, **network_layout), dict(cd=3, eta=0.01, update_forward=False, update_backward=True), 'lightblue', r'Learn w$_{B}$ and biases', 'update_wb_and_biases_3'])
+
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 0.1, scale_backward_weights_by=10.0,  **network_layout), dict(cd=3, eta=0.01, update_forward=True, update_backward=False), 'darkviolet', r'Learn w$_{F}$ and biases', 'update_wf_and_biases_0'])
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 0.1, scale_backward_weights_by= 1.0,  **network_layout), dict(cd=3, eta=0.01, update_forward=True, update_backward=False), 'darkblue',   r'Learn w$_{F}$ and biases', 'update_wf_and_biases_1'])
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 0.1, scale_backward_weights_by= 0.1,  **network_layout), dict(cd=3, eta=0.01, update_forward=True, update_backward=False), 'blue',       r'Learn w$_{F}$ and biases', 'update_wf_and_biases_2']) # <- only weight scale that leads to high variance in hidden states
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by= 0.1, scale_backward_weights_by= 0.01, **network_layout), dict(cd=3, eta=0.01, update_forward=True, update_backward=False), 'lightblue',  r'Learn w$_{F}$ and biases', 'update_wf_and_biases_3'])
+
+    # # --------------------------------------------------------------------------------
+    # # test level of initial activation
+
+    # test_at = np.zeros((1,1))
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by=0.5, scale_backward_weights_by=0.5,  **network_layout), dict(cd=3, eta=0.01, update_forward=False, update_backward=False, update_biases=False),  'blue', r'test', 'test'])
+
+    # --------------------------------------------------------------------------------
+    # test sparse rbm variants
+
+    # experiments.append([SparseRBM,          dict(connection_probability=1., **network_layout), dict(cd=3, eta=0.01), '#1f77b4', 'Sparse RBM',            'sparse_rbm'])
+    # experiments.append([SparseDirectedRBM,  dict(connection_probability=1., **network_layout), dict(cd=3, eta=0.01), '#9467bd', 'Sparse, directed RBM', 'sparse_directed_rbm'])
+
+    # experiments.append([SparseRBM, dict(connection_probability=1.00, **network_layout), dict(cd=3, eta=0.01), 'darkblue',       'Dense  RBM ($p=1.00$)', 'sparse_rbm_1'])
+    # experiments.append([SparseRBM, dict(connection_probability=0.90, **network_layout), dict(cd=3, eta=0.01), 'blue',           'Sparse RBM ($p=0.90$)', 'sparse_rbm_2'])
+    # experiments.append([SparseRBM, dict(connection_probability=0.75, **network_layout), dict(cd=3, eta=0.01), 'cornflowerblue', 'Sparse RBM ($p=0.75$)', 'sparse_rbm_3'])
+    # experiments.append([SparseRBM, dict(connection_probability=0.50, **network_layout), dict(cd=3, eta=0.01), 'skyblue',        'Sparse RBM ($p=0.50$)', 'sparse_rbm_4'])
+    # experiments.append([SparseRBM, dict(connection_probability=0.25, **network_layout), dict(cd=3, eta=0.01), 'cyan',           'Sparse RBM ($p=0.25$)', 'sparse_rbm_5'])
+    # experiments.append([SparseRBM, dict(connection_probability=0.01, **network_layout), dict(cd=3, eta=0.01), 'green',          'Sparse RBM ($p=0.10$)', 'sparse_rbm_6'])
+
+    # experiments.append([SparseDirectedRBM, dict(connection_probability=1.00, **network_layout), dict(cd=3, eta=0.01), 'darkblue',       'Dense,  directed RBM ($p=1.00$)', 'sparse_directed_rbm_1'])
+    # experiments.append([SparseDirectedRBM, dict(connection_probability=0.90, **network_layout), dict(cd=3, eta=0.01), 'blue',           'Sparse, directed RBM ($p=0.90$)', 'sparse_directed_rbm_2'])
+    # experiments.append([SparseDirectedRBM, dict(connection_probability=0.75, **network_layout), dict(cd=3, eta=0.01), 'cornflowerblue', 'Sparse, directed RBM ($p=0.75$)', 'sparse_directed_rbm_3'])
+    # experiments.append([SparseDirectedRBM, dict(connection_probability=0.50, **network_layout), dict(cd=3, eta=0.01), 'skyblue',        'Sparse, directed RBM ($p=0.50$)', 'sparse_directed_rbm_4'])
+    # experiments.append([SparseDirectedRBM, dict(connection_probability=0.25, **network_layout), dict(cd=3, eta=0.01), 'cyan',           'Sparse, directed RBM ($p=0.25$)', 'sparse_directed_rbm_5'])
+    # experiments.append([SparseDirectedRBM, dict(connection_probability=0.10, **network_layout), dict(cd=3, eta=0.01), 'green',          'Sparse, directed RBM ($p=0.10$)', 'sparse_directed_rbm_6'])
+
+    experiments.append([SparseRBM, dict(connection_probability=1.0, scale_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'darkblue',       ' Dense RBM ($p=1.0$)', 'sparse_rbm_1'])
+    experiments.append([SparseRBM, dict(connection_probability=0.707, scale_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'blue',           'Sparse RBM ($p=0.707$)', 'sparse_rbm_2'])
+    experiments.append([SparseRBM, dict(connection_probability=0.5, scale_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'cornflowerblue', 'Sparse RBM ($p=0.5$)', 'sparse_rbm_3'])
+    experiments.append([SparseRBM, dict(connection_probability=0.25, scale_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'lightblue',      'Sparse RBM ($p=0.25$)', 'sparse_rbm_4'])
+    experiments.append([SparseDirectedRBM, dict(connection_probability=1.0, scale_forward_weights_by=0.1, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'darkred', ' Dense, directed RBM ($p=1.0$)', 'sparse_directed_rbm_1'])
+    experiments.append([SparseDirectedRBM, dict(connection_probability=0.707, scale_forward_weights_by=0.1, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'red',     'Sparse, directed RBM ($p=0.707$)', 'sparse_directed_rbm_2'])
+    experiments.append([SparseDirectedRBM, dict(connection_probability=0.5, scale_forward_weights_by=0.1, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'orange',  'Sparse, directed RBM ($p=0.5$)', 'sparse_directed_rbm_3'])
+    experiments.append([SparseDirectedRBM, dict(connection_probability=0.25, scale_forward_weights_by=0.1, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), 'gold',    'Sparse, directed RBM ($p=0.25$)', 'sparse_directed_rbm_3'])
 
     # --------------------------------------------------------------------------------
     # run experiments and plot outputs
