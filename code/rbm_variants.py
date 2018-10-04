@@ -103,7 +103,7 @@ class RestrictedBoltzmannMachine(object):
 
         return activities_0, activities_cd
 
-    def _update_weights(self, activities_0, activities_cd, layers, eta):
+    def _update_weights(self, layers, activities_0, activities_cd, eta):
         for ii in range(len(layers)-1):
             vh_0  = activities_0[ii][:,:,None]  * activities_0[ii+1][:,None,:]
             vh_cd = activities_cd[ii][:,:,None] * activities_cd[ii+1][:,None,:]
@@ -114,7 +114,7 @@ class RestrictedBoltzmannMachine(object):
 
         return layers
 
-    def _update_biases(self, activities_0, activities_cd, layers, eta):
+    def _update_biases(self, layers, activities_0, activities_cd, eta):
         for ii in range(len(layers)):
             db = eta * np.mean(activities_0[ii] - activities_cd[ii], axis=0)
             layers[ii].biases += db
@@ -138,8 +138,8 @@ class RestrictedBoltzmannMachine(object):
 
         for batch in inputs:
             activities_0, activities_cd = self._run(batch, [visible, hidden], cd)
-            visible, hidden = self._update_weights(activities_0, activities_cd, [visible, hidden], eta, *args, **kwargs)
-            visible, hidden = self._update_biases(activities_0, activities_cd, [visible, hidden], eta, *args, **kwargs)
+            visible, hidden = self._update_weights([visible, hidden], activities_0, activities_cd, eta, *args, **kwargs)
+            visible, hidden = self._update_biases([visible, hidden], activities_0, activities_cd, eta, *args, **kwargs)
 
         return visible, hidden
 
@@ -236,7 +236,6 @@ class DirectedRBM(RestrictedBoltzmannMachine):
 
     def _initialize_weights(self, scale_forward_weights_by=1., scale_backward_weights_by=1.):
         for ii in range(len(self.layers)-1):
-    def _update_weights(self, activities_0, activities_cd, layers, eta,
             w1 = self._initialize_weight_matrix(self.layers[ii].count,
                                                 self.layers[ii+1].count,
                                                 scale_weights_by=scale_forward_weights_by)
@@ -246,6 +245,7 @@ class DirectedRBM(RestrictedBoltzmannMachine):
             self.layers[ii].forward_weights    = w1
             self.layers[ii+1].backward_weights = w2.T
 
+    def _update_weights(self, layers, activities_0, activities_cd, eta,
                         update_forward=True, update_backward=True, *args, **kwargs):
 
         for ii in range(len(layers)-1):
@@ -262,8 +262,76 @@ class DirectedRBM(RestrictedBoltzmannMachine):
 
         return layers
 
-    def _update_biases(self, activities_0, activities_cd, layers, eta,
+    def _update_biases(self, layers, activities_0, activities_cd, eta,
                        update_biases=True, *args, **kwargs):
-
         if update_biases:
-            return super(DirectedRBM, self)._update_biases(activities_0, activities_cd, layers, eta)
+            return super(DirectedRBM, self)._update_biases(layers, activities_0, activities_cd, eta)
+
+
+class SparseRBM(RestrictedBoltzmannMachine):
+
+    def __repr__(self):
+        return "Sparsely connected RBM"
+
+    def __init__(self, connection_probability=1., *args, **kwargs):
+        super(SparseRBM, self).__init__(*args, **kwargs)
+        self._initialize_connectivity(connection_probability=connection_probability)
+
+    def _initialize_connectivity(self, connection_probability=1.):
+        for ii in range(len(self.layers)-1):
+            c = self._initialize_connectivity_matrix(self.layers[ii].count,
+                                                     self.layers[ii+1].count,
+                                                     connection_probability=connection_probability)
+            self.layers[ii].forward_connectivity = c
+            self.layers[ii+1].backward_connectivity = c.T
+
+    def _initialize_connectivity_matrix(self, total_sources, total_targets, connection_probability=1.):
+        return np.random.rand(total_sources, total_targets) <= connection_probability
+
+    def _update_weights(self, layers, *args, **kwargs):
+        layers = super(SparseRBM, self)._update_weights(layers, *args, **kwargs)
+        self._enforce_sparsity(layers)
+        return layers
+
+    def _enforce_sparsity(self, layers):
+        for ii in range(len(layers)-1):
+            layers[ii].forward_weights *= layers[ii].forward_connectivity
+            layers[ii+1].backward_weights *= layers[ii+1].backward_connectivity
+
+        return layers
+
+
+class SparseDirectedRBM(DirectedRBM):
+
+    def __repr__(self):
+        return "Sparsely connected directed RBM"
+
+    def __init__(self, connection_probability=1., *args, **kwargs):
+        super(SparseDirectedRBM, self).__init__(*args, **kwargs)
+        self._initialize_connectivity(connection_probability=connection_probability)
+
+    def _initialize_connectivity(self, connection_probability=1.):
+        for ii in range(len(self.layers)-1):
+            c1 = self._initialize_connectivity_matrix(self.layers[ii].count,
+                                                     self.layers[ii+1].count,
+                                                     connection_probability=connection_probability)
+            c2 = self._initialize_connectivity_matrix(self.layers[ii].count,
+                                                     self.layers[ii+1].count,
+                                                     connection_probability=connection_probability)
+            self.layers[ii].forward_connectivity = c1
+            self.layers[ii+1].backward_connectivity = c2.T
+
+    def _initialize_connectivity_matrix(self, total_sources, total_targets, connection_probability=1.):
+        return np.random.rand(total_sources, total_targets) <= connection_probability
+
+    def _update_weights(self, layers, *args, **kwargs):
+        layers = super(SparseDirectedRBM, self)._update_weights(layers, *args, **kwargs)
+        self._enforce_sparsity(layers)
+        return layers
+
+    def _enforce_sparsity(self, layers):
+        for ii in range(len(layers)-1):
+            layers[ii].forward_weights *= layers[ii].forward_connectivity
+            layers[ii+1].backward_weights *= layers[ii+1].backward_connectivity
+
+        return layers
