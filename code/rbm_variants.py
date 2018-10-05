@@ -333,3 +333,28 @@ class SparseDirectedRBM(DirectedRBM):
             layers[ii+1].backward_weights *= layers[ii+1].backward_connectivity
 
         return layers
+
+
+class ComplementaryRBM(SparseDirectedRBM):
+
+    def __repr__(self):
+        return "Sparsely connected directed RBM in which no connection is bi-directional"
+
+    def _initialize_connectivity(self, connection_probability=0.5):
+
+        assert connection_probability <= 0.5, "Cannot construct complementary connectivity with p>0.5!"
+
+        for ii in range(len(self.layers)-1):
+            c1 = self._initialize_connectivity_matrix(self.layers[ii].count,
+                                                     self.layers[ii+1].count,
+                                                     connection_probability=connection_probability)
+            c2 = self._sample_complementary_connectivity_matrix(c1, connection_probability)
+            self.layers[ii].forward_connectivity = c1
+            self.layers[ii+1].backward_connectivity = c2.T
+
+    def _sample_complementary_connectivity_matrix(self, connectivity_matrix, desired_connection_probability):
+        complement = np.invert(connectivity_matrix)
+        actual_connection_probability = np.mean(complement)
+        corrected_probability = desired_connection_probability / actual_connection_probability
+        resample_by = np.random.rand(*complement.shape) <= corrected_probability
+        return complement * resample_by
