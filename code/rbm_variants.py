@@ -92,13 +92,11 @@ class RestrictedBoltzmannMachine(object):
         activities[0] = batch
 
         # run CD Gibbs sampling steps
+        activities = self._forward_pass(activities, layers)
+        activities_0 = deepcopy(activities)
         for ii in range(cd):
-            # print "cd = {}".format(ii)
-            activities = self._forward_pass(activities, layers)
-            if ii == 0:
-                activities_0 = deepcopy(activities)
             activities = self._backward_pass(activities, layers)
-
+            activities = self._forward_pass(activities, layers)
         activities_cd = deepcopy(activities)
 
         return activities_0, activities_cd
