@@ -12,8 +12,13 @@ import matplotlib.pyplot as plt
 import mnist
 
 from functools import partial
-from rbm_variants import BoltzmannLayer, RestrictedBoltzmannMachine, DirectedRBM, SparseRBM, SparseDirectedRBM
-from utils import rescale, make_batches, characterise_model, subplots, get_unblockedshaped, get_cosine_similarity, get_mean_squared_error
+from rbm_variants import (LogisticLayer, BoltzmannLayer,
+                          RestrictedBoltzmannMachine, DirectedRBM,
+                          SparseRBM, SparseDirectedRBM)
+
+from utils import (rescale, make_batches, characterise_model,
+                   subplots, get_unblockedshaped,
+                   get_cosine_similarity, get_mean_squared_error)
 
 # styling
 import matplotlib as mpl
