@@ -111,14 +111,17 @@ def make_diagnostic_plots(forward_pass_activities, backward_pass_activities, lay
         else:
             ax = axes[ii]
 
-        ax.plot(layers[ii].forward_weights.ravel(), layers[ii+1].backward_weights.transpose().ravel(), '.', markersize=1, color=color, alpha=0.1)
+        ax.plot(layers[ii].forward_weights.ravel(),
+                layers[ii+1].backward_weights.transpose().ravel(),
+                '.', markersize=1, color=color, alpha=0.1,
+                rasterized=True)
 
     ax.set_xlabel('Forward weight value [AU]')
     ax.set_ylabel('Backward weight value [AU]')
 
     fig.tight_layout()
-    # fig.savefig(fdir + "weight_alignment.pdf")
-    fig.savefig(fdir + "weight_alignment.png")
+    fig.savefig(fdir + "weight_alignment.pdf")
+    # fig.savefig(fdir + "weight_alignment.png")
     fig.savefig(fdir + "weight_alignment.svg")
 
     # --------------------------------------------------------------------------------
