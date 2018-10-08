@@ -286,9 +286,10 @@ if __name__ == '__main__':
 
     # initialise figure
     fig, ax = plt.subplots(1,1)
+    fig2, ax2 = plt.subplots(1,1)
 
     # loop over experiments and populate plot
-    for model, init_params, train_params, color, label, fname in experiments:
+    for ii, (model, init_params, train_params, color, label, fname) in enumerate(experiments):
 
         test_params = dict(loss_function=get_mean_squared_error,
                            # plot_function=None)
@@ -311,7 +312,9 @@ if __name__ == '__main__':
                  train_params = train_params,
         )
 
+        # --------------------------------------------------------------------------------
         # plot loss
+
         if samples[0] == 0:
             samples[0] = 1 # show first data point if x-axis is log-scaled
 
@@ -323,9 +326,9 @@ if __name__ == '__main__':
 
         # annotate final loss
         final_sample = samples[-1]
-        final_loss = loss[:,-1].mean()
-        ax.annotate(s='{:.3f}'.format(final_loss),
-                    xy=(final_sample, final_loss), xycoords='data',
+        final_loss = loss[:,-1]
+        ax.annotate(s='{:.3f}'.format(final_loss.mean()),
+                    xy=(final_sample, final_loss.mean()), xycoords='data',
                     xytext=(5, 0), textcoords='offset points',
                     fontsize='xx-small')
 
@@ -341,6 +344,19 @@ if __name__ == '__main__':
         fig.tight_layout()
         fig.savefig('../figures/performance_vs_time.pdf', dpi=300)
         fig.savefig('../figures/performance_vs_time.svg', dpi=300)
+
+        # --------------------------------------------------------------------------------
+        # plot comparison of final loss
+
+        ax2.bar(ii, final_loss.mean(), yerr=final_loss.std(), color=color, alpha=0.9)
+
+        ax2.set_xticks(range(len(experiments)))
+        ax2.set_xticklabels([label for (model, init_params, train_params, color, label, fname) in experiments], rotation=90)
+        ax2.set_ylabel('Mean squared error')
+
+        fig2.tight_layout()
+        fig2.savefig('../figures/final_performance.pdf', dpi=300)
+        fig2.savefig('../figures/final_performance.svg', dpi=300)
 
     # plt.ion()
     # plt.show()
