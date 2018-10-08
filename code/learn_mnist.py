@@ -14,7 +14,7 @@ import mnist
 from functools import partial
 from rbm_variants import (LogisticLayer, BoltzmannLayer,
                           RestrictedBoltzmannMachine, DirectedRBM,
-                          SparseRBM, SparseDirectedRBM)
+                          SparseRBM, SparseDirectedRBM, ComplementaryRBM)
 
 from utils import (rescale, make_batches, characterise_model,
                    subplots, get_unblockedshaped,
