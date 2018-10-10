@@ -48,7 +48,11 @@ def load_mnist(ddir='../data/mldata', mode='train'):
     return inputs, targets
 
 
-def make_diagnostic_plots(forward_pass_activities, backward_pass_activities, layers, color='#1f77b4', fdir='../figures/'):
+def make_diagnostic_plots(forward_pass_activities,
+                          backward_pass_activities,
+                          layers, color='#1f77b4',
+                          fdir='../figures/'):
+
     total_layers = len(layers)
 
     # --------------------------------------------------------------------------------
@@ -57,7 +61,9 @@ def make_diagnostic_plots(forward_pass_activities, backward_pass_activities, lay
     fig, axes = plt.subplots(total_layers, 2, sharex=True, sharey=True)
     for ii, activities in enumerate([forward_pass_activities, backward_pass_activities]):
         for jj, activity in enumerate(activities):
-            axes[jj, ii].hist(np.mean(activity, axis=0), bins=np.linspace(0., 1., 11), color=color) # across stimuli
+            axes[jj, ii].hist(np.mean(activity, axis=0),
+                              bins=np.linspace(0., 1., 11),
+                              color=color) # across stimuli
             axes[jj,  0].set_ylabel('Number of units (layer {})'.format(jj))
 
     axes[0,0].set_title("Forward pass")
@@ -188,7 +194,7 @@ if __name__ == '__main__':
     ddir = '../data/mldata'
 
     inputs_train, _ = load_mnist(ddir, 'train')
-    inputs_test, _ = load_mnist(ddir, 'test')
+    inputs_test,  _ = load_mnist(ddir, 'test')
 
     inputs_train = rescale(inputs_train, 0., 1.)
     inputs_test  = rescale(inputs_test,  0., 1.)
