@@ -346,3 +346,50 @@ class ComplementaryRBM(SparseDirectedRBM):
         corrected_probability = desired_connection_probability / actual_connection_probability
         resample_by = np.random.rand(*complement.shape) <= corrected_probability
         return complement * resample_by
+
+
+class SparselyActiveDirectedRBM(DirectedRBM):
+
+    def _get_penalty(self, activities_0, activities_cd,
+                     sparsity_target=0.1, sparsity_cost=1.):
+
+        # only ever want to impose sparsity bias on hidden layer,
+        # which is presumed to be the last; hence the -1 index;
+        # TODO: compute q as a temporally averaged version via q = lambda * q_old + (1-lambda) * q_current
+        q = (np.mean(activities_0[-1], axis=0) + np.mean(activities_cd[-1], axis=0))/2
+        penalty = sparsity_cost * (sparsity_target - q)
+        return penalty
+
+    def _update_weights(self, layers, activities_0, activities_cd, eta,
+                        update_forward=True, update_backward=True,
+                        sparsity_target=0.1, sparsity_cost=1.,
+                        *args, **kwargs):
+
+        layers = super(SparselyActiveDirectedRBM, self)._update_weights(layers, activities_0, activities_cd, eta,
+                                                                        update_forward, update_backward,
+                                                                        *args, **kwargs)
+
+        penalty = self._get_penalty(activities_0, activities_cd, sparsity_target, sparsity_cost)
+
+        if update_forward:
+            layers[0].forward_weights   += eta * penalty[None,:] * np.ones_like(layers[0].forward_weights)
+
+        if update_backward:
+            layers[-1].backward_weights += eta * penalty[:,None] * np.ones_like(layers[-1].backward_weights)
+
+        return layers
+
+    def _update_biases(self, layers, activities_0, activities_cd, eta,
+                       update_biases=True,
+                       sparsity_target=0.1, sparsity_cost=1.,
+                       *args, **kwargs):
+
+        layers = super(SparselyActiveDirectedRBM, self)._update_biases(layers, activities_0, activities_cd, eta,
+                                                                       update_biases=update_biases,
+                                                                       *args, **kwargs)
+
+        if update_biases:
+            penalty = self._get_penalty(activities_0, activities_cd, sparsity_target, sparsity_cost)
+            layers[-1].biases += eta * penalty
+
+        return layers
