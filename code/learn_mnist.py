@@ -185,6 +185,20 @@ def make_diagnostic_plots(forward_pass_activities,
     fig.savefig(fdir + "reconstructions.pdf")
     fig.savefig(fdir + "reconstructions.svg")
 
+    # --------------------------------------------------------------------------------
+    # average input to which each hidden neuron responds to
+
+    visible_activity, hidden_activity = forward_pass_activities
+    mean_stimulus_response = np.dot(visible_activity.T, hidden_activity)
+    reshaped = get_unblockedshaped(mean_stimulus_response.T, (28,28), (20, 20)) # TODO don't hardcode MNIST and 400 unit hidden layer
+
+    fig, ax = plt.subplots(1,1)
+    ax.imshow(reshaped, cmap='gray')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    fig.tight_layout()
+    fig.savefig(fdir + "mean_stimulus_response.pdf")
+    fig.savefig(fdir + "mean_stimulus_response.svg")
     # plt.ion()
     # plt.show()
     # raw_input("Press any key to close figures...")
