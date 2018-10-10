@@ -64,6 +64,11 @@ def make_diagnostic_plots(forward_pass_activities,
             axes[jj, ii].hist(np.mean(activity, axis=0),
                               bins=np.linspace(0., 1., 11),
                               color=color) # across stimuli
+            p = np.mean(activity)
+            axes[jj, ii].axvline(p, 0, 1, color='k', ls='--', alpha=0.1)
+            axes[jj, ii].annotate(r'$p = {:.3f}$'.format(p), (p, 0.8),
+                                  xycoords='axes fraction',
+                                  horizontalalignment='center')
             axes[jj,  0].set_ylabel('Number of units (layer {})'.format(jj))
 
     axes[0,0].set_title("Forward pass")
