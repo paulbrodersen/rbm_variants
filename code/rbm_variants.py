@@ -266,13 +266,13 @@ class DirectedRBM(RestrictedBoltzmannMachine):
             return super(DirectedRBM, self)._update_biases(layers, activities_0, activities_cd, eta)
 
 
-class Sparse(object):
+class SparselyConnected(object):
 
     def _initialize_connectivity_matrix(self, total_sources, total_targets, connection_probability=1.):
         return np.random.rand(total_sources, total_targets) <= connection_probability
 
     def _update_weights(self, layers, *args, **kwargs):
-        layers = super(Sparse, self)._update_weights(layers, *args, **kwargs)
+        layers = super(SparselyConnected, self)._update_weights(layers, *args, **kwargs)
         self._enforce_sparsity(layers)
         return layers
 
@@ -284,7 +284,7 @@ class Sparse(object):
         return layers
 
 
-class SparseRBM(Sparse, RestrictedBoltzmannMachine):
+class SparseRBM(SparselyConnected, RestrictedBoltzmannMachine):
 
     def __repr__(self):
         return "Sparsely connected RBM"
@@ -302,7 +302,7 @@ class SparseRBM(Sparse, RestrictedBoltzmannMachine):
             self.layers[ii+1].backward_connectivity = c.T
 
 
-class SparseDirectedRBM(Sparse, DirectedRBM):
+class SparseDirectedRBM(SparselyConnected, DirectedRBM):
 
     def __repr__(self):
         return "Sparsely connected directed RBM"
