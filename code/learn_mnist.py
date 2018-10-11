@@ -268,9 +268,13 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------------
     # import experiments
 
-    from experiments_figure_1 import experiments
-    from experiments_figure_2 import experiments
-    from experiments_figure_3 import experiments
+    from experiments_figure_1 import experiments as experiments_figure_1
+    from experiments_figure_2 import experiments as experiments_figure_2
+    from experiments_figure_3 import experiments as experiments_figure_3
+
+    experiments = experiments_figure_1 + \
+                  experiments_figure_2 + \
+                  experiments_figure_3
 
     # --------------------------------------------------------------------------------
     # run experiments and plot outputs
