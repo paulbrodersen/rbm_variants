@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import mnist
 
 from functools import partial
+
 from rbm_variants import (LogisticLayer, BoltzmannLayer,
                           RestrictedBoltzmannMachine, DirectedRBM,
                           SparseRBM, SparseDirectedRBM, ComplementaryRBM,
@@ -20,12 +21,14 @@ from rbm_variants import (LogisticLayer, BoltzmannLayer,
 
 from utils import (rescale, make_batches, characterise_model,
                    subplots, get_unblockedshaped,
-                   get_cosine_similarity, get_mean_squared_error)
+                   get_cosine_similarity, get_mean_squared_error
+)
 
 # styling
 import matplotlib as mpl
 mpl.rcParams['axes.spines.top'] = False
 mpl.rcParams['axes.spines.right'] = False
+
 
 def load_mnist(ddir='../data/mldata', mode='train'):
 
@@ -349,7 +352,7 @@ if __name__ == '__main__':
 
         test_params = dict(loss_function=get_mean_squared_error,
                            # plot_function=None)
-                           plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/'+fname+'--'))
+                           plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/'+fname+'_'))
 
         loss, samples = characterise_model(model             = model,
                                            init_params       = init_params,
@@ -361,7 +364,7 @@ if __name__ == '__main__':
                                            total_batches     = test_at[-1],
                                            total_repetitions = 1)
 
-        np.savez('../data/results--' + fname,
+        np.savez('../data/results_' + fname,
                  loss         = loss,
                  samples      = samples,
                  model        = str(type(model)),
