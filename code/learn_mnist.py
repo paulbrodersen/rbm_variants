@@ -360,7 +360,6 @@ if __name__ == '__main__':
     for ii, (model, init_params, train_params, color, label, fname) in enumerate(experiments):
 
         test_params = dict(loss_function=get_mean_squared_error,
-                           # plot_function=None)
                            plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/'+fname+'_'))
 
         loss, samples = characterise_model(model             = model,
@@ -404,7 +403,6 @@ if __name__ == '__main__':
         ax.set_xscale('log')
         # ax.set_yscale('log')
         ax.set_ylim(0, 0.55)
-        # ax.set_ylim(0.01, 0.5)
         ax.set_xlabel('Training samples')
         ax.set_ylabel('Mean squared error')
         ax.legend(loc=1, fontsize='xx-small')
@@ -425,8 +423,3 @@ if __name__ == '__main__':
         fig2.tight_layout()
         fig2.savefig('../figures/final_performance.pdf', dpi=300)
         fig2.savefig('../figures/final_performance.svg', dpi=300)
-
-    # plt.ion()
-    # plt.show()
-    # raw_input('\nPress any key to close all figures.')
-    # plt.close('all')
