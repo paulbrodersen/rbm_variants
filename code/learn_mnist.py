@@ -283,6 +283,7 @@ if __name__ == '__main__':
     for ii, (model, init_params, train_params, color, label, fname) in enumerate(experiments):
 
         test_params = dict(loss_function=get_mean_squared_error,
+                           # plot_function=None)
                            plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/'+fname+'_'))
 
         loss, samples = characterise_model(model             = model,
