@@ -11,7 +11,7 @@ from rbm_variants import (LogisticLayer, BoltzmannLayer,
 )
 
 # network layout
-network_layout = dict(layers=[LogisticLayer(inputs_train.shape[-1]), BoltzmannLayer(400)])
+network_layout = dict(layers=[LogisticLayer(784), BoltzmannLayer(400)])
 
 # parameters
 experiments = []
