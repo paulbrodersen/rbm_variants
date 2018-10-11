@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
 """
-Train RBM variants to reconstruct MNIST digits
-
-TODO:
-- sparse networks, show that weights from bidirectional connections are not systematically larger than weights in unidirectional connections
+Train RBM variants to reconstruct MNIST digits, and
+reproduce graphs in Brodersen et al (2018).
 """
 
 import numpy as np
@@ -55,6 +53,17 @@ def make_diagnostic_plots(forward_pass_activities,
                           backward_pass_activities,
                           layers, color='#1f77b4',
                           fdir='../figures/'):
+    """
+    This function is called on each RBM test and produces figures for various RBM properties at that stage of training:
+        - distribution of activities
+        - distribution of weights
+        - forward vs backward weights ("weight alignment")
+        - distribution of biases
+        - input reconstructions
+        - receptive fields
+        - backward weights grouped by hidden neurons
+        - forward weights grouped by hidden neuron
+    """
 
     total_layers = len(layers)
 
@@ -146,7 +155,7 @@ def make_diagnostic_plots(forward_pass_activities,
     fig.savefig(fdir + "weight_alignment.svg")
 
     # --------------------------------------------------------------------------------
-    # biases
+    # distribution of biases
 
     extremum = 10
     fig, axes = plt.subplots(total_layers, sharex=True, sharey=True)
@@ -165,7 +174,7 @@ def make_diagnostic_plots(forward_pass_activities,
     fig.savefig(fdir + "bias_distribution.svg")
 
     # --------------------------------------------------------------------------------
-    # reconstructions
+    # inputs and reconstructions
 
     inputs = forward_pass_activities[0]
     outputs = backward_pass_activities[0]
@@ -189,7 +198,7 @@ def make_diagnostic_plots(forward_pass_activities,
     fig.savefig(fdir + "reconstructions.svg")
 
     # --------------------------------------------------------------------------------
-    # average input to which each hidden neuron responds to
+    # average input to which each hidden neuron responds to ("receptive fields")
 
     visible_activity, hidden_activity = forward_pass_activities
     mean_stimulus_response = np.dot(visible_activity.T, hidden_activity)
@@ -218,7 +227,7 @@ def make_diagnostic_plots(forward_pass_activities,
     fig.savefig(fdir + "backward_weights.svg")
 
     # --------------------------------------------------------------------------------
-    # weights of each visible neuron to hidden neurons (by hidden neuron)
+    # weights from visible neurons to each hidden neuron
 
     forward_weights = layers[0].forward_weights
     reshaped = get_unblockedshaped(forward_weights.T, (28,28), (20, 20)) # TODO don't hardcode MNIST and 400 unit hidden layer
@@ -372,7 +381,7 @@ if __name__ == '__main__':
         )
 
         # --------------------------------------------------------------------------------
-        # plot loss
+        # plot loss versus time
 
         if samples[0] == 0:
             samples[0] = 1 # show first data point if x-axis is log-scaled
