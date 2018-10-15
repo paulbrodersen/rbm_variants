@@ -289,7 +289,7 @@ if __name__ == '__main__':
 
         test_params = dict(loss_function=get_mean_squared_error,
                            # plot_function=None)
-                           plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/'+fname+'_'))
+                           plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/tmp/'+fname+'_'))
 
         loss, samples = characterise_model(model             = model,
                                            init_params       = init_params,
@@ -337,8 +337,8 @@ if __name__ == '__main__':
         ax.legend(loc=1, fontsize='xx-small')
 
         fig.tight_layout()
-        fig.savefig('../figures/performance_vs_time.pdf', dpi=300)
-        fig.savefig('../figures/performance_vs_time.svg', dpi=300)
+        fig.savefig('../figures/tmp/performance_vs_time.pdf', dpi=300)
+        fig.savefig('../figures/tmp/performance_vs_time.svg', dpi=300)
 
         # --------------------------------------------------------------------------------
         # plot comparison of final loss
@@ -350,5 +350,5 @@ if __name__ == '__main__':
         ax2.set_ylabel('Mean squared error')
 
         fig2.tight_layout()
-        fig2.savefig('../figures/final_performance.pdf', dpi=300)
-        fig2.savefig('../figures/final_performance.svg', dpi=300)
+        fig2.savefig('../figures/tmp/final_performance.pdf', dpi=300)
+        fig2.savefig('../figures/tmp/final_performance.svg', dpi=300)
