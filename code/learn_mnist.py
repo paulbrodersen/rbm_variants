@@ -83,8 +83,8 @@ def make_diagnostic_plots(forward_pass_activities,
                                   horizontalalignment='center')
             axes[jj,  0].set_ylabel('Number of units (layer {})'.format(jj))
 
-    axes[0,0].set_title("Forward pass")
-    axes[0,1].set_title("Backward pass")
+    axes[0,0].set_title("Data phase")
+    axes[0,1].set_title("Model phase")
     axes[-1, 0].set_xlabel('Fraction of samples ON')
     axes[-1, 1].set_xlabel('Fraction of samples ON')
 
