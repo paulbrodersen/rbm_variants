@@ -153,7 +153,6 @@ def make_diagnostic_plots(forward_pass_activities,
 
     fig.tight_layout()
     fig.savefig(fdir + "weight_alignment.pdf")
-    # fig.savefig(fdir + "weight_alignment.png")
     fig.savefig(fdir + "weight_alignment.svg")
 
     # --------------------------------------------------------------------------------
