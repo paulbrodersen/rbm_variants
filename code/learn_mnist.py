@@ -148,6 +148,8 @@ def make_diagnostic_plots(forward_pass_activities,
 
     ax.set_xlabel('Forward weight value [AU]')
     ax.set_ylabel('Backward weight value [AU]')
+    ax.set_xlim(-1, 1)
+    ax.set_ylim(-1, 1)
 
     fig.tight_layout()
     fig.savefig(fdir + "weight_alignment.pdf")
