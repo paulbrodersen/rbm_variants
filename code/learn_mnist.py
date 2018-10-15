@@ -269,13 +269,20 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------------
     # import experiments
 
-    from experiments_figure_1 import experiments as experiments_figure_1
-    from experiments_figure_2 import experiments as experiments_figure_2
-    from experiments_figure_3 import experiments as experiments_figure_3
+    # from rbm_variants import (LogisticLayer, BoltzmannLayer,
+    #                           RestrictedBoltzmannMachine, DirectedRBM)
+    # network_layout = dict(layers=[LogisticLayer(784), BoltzmannLayer(400)])
+    # experiments = []
+    # experiments.append([DirectedRBM, dict(scale_forward_weights_by=0.1, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01), '#9467bd', 'Directed RBM', 'test'])
 
-    experiments = experiments_figure_1 + \
-                  experiments_figure_2 + \
-                  experiments_figure_3
+    # from experiments_figure_1 import experiments as experiments_figure_1
+    # from experiments_figure_2 import experiments as experiments_figure_2
+    # from experiments_figure_3 import experiments as experiments_figure_3
+    # experiments = experiments_figure_1 + \
+    #               experiments_figure_2 + \
+    #               experiments_figure_3
+
+    from experiments_figure_3 import experiments
 
     # --------------------------------------------------------------------------------
     # run experiments and plot outputs
@@ -299,7 +306,7 @@ if __name__ == '__main__':
                                            inputs_test       = inputs_test,
                                            test_at           = test_at,
                                            total_batches     = test_at[-1],
-                                           total_repetitions = 1)
+                                           total_repetitions = 10)
 
         np.savez('../data/results_' + fname,
                  loss         = loss,
