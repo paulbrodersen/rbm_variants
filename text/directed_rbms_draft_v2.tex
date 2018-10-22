@@ -2,20 +2,14 @@
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage{fixltx2e}
 \usepackage{graphicx}
-\usepackage{longtable}
 \usepackage{float}
 \usepackage{wrapfig}
-\usepackage{rotating}
-\usepackage[normalem]{ulem}
 \usepackage{amsmath}
 \usepackage{textcomp}
-\usepackage{marvosym}
-\usepackage{wasysym}
 \usepackage{amssymb}
-\usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{xcolor}
 \hypersetup{
     colorlinks,
     linkcolor={red!50!black},
@@ -23,8 +17,34 @@
     urlcolor={blue!80!black}
 }
 \usepackage[round]{natbib}
+\usepackage{lineno}
 \tolerance=1000
+
+% https://tex.stackexchange.com/questions/1408/where-to-put-the-institute-information-in-the-article-document-class
+\usepackage[affil-it]{authblk}
+\makeatletter
+\def\@maketitle{%
+  \newpage
+  \null
+  \vskip 2em%
+  \begin{center}%
+  \let \footnote \thanks
+    {\Large\bfseries \@title \par}%
+    \vskip 1.5em%
+    {\normalsize
+      \lineskip .5em%
+      \begin{tabular}[t]{c}%
+        \@author
+      \end{tabular}\par}%
+    \vskip 1em%
+    {\normalsize \@date}%
+  \end{center}%
+  \par
+  \vskip 1.5em}
+\makeatother
+
 \author{Paul J N Brodersen, Colin J Akerman}
+\affil{Department of Pharmacology, University of Oxford}
 \date{\today}
 \title{Restricted Boltzmann machines with asymmetric forward and backward weights learn to reconstruct inputs}
 \hypersetup{
@@ -34,10 +54,11 @@
 \begin{document}
 
 \maketitle
+\linenumbers
 
 \begin{abstract}
 In canonical Restricted Boltzmann machines (RBM), connections between
-units are bi-directional, i.e. the connection from unit $i$ to unit
+units are bi-directional, i.e.\ the connection from unit $i$ to unit
 $j$ is identical to (and has the same weight as) the connection from
 unit $j$ to unit $i$. Here, we relax this symmetry constraint and
 explore RBM variants where the forward and backward connection weights
@@ -48,6 +69,8 @@ even if the forward, visible-to-hidden layer weights are kept constant
 and only the backward, hidden-to-visible layer weights are updated
 during training.
 \end{abstract}
+
+\section{Introduction}
 
 A restricted Boltzmann machine (RBM) is an artificial neural network
 that in its simplest form consists of two layers of Boltzmann units.
@@ -80,7 +103,7 @@ Subsequently, Geoff Hinton and colleagues discovered a fast variant of
 the original learning algorithm (contrastive divergence
 \citep{Hinton2002,Carreira-Perpinan2005}) such that this method could
 be applied to complex, non-trivial inputs. They showed that the hidden
-units would learn to encode higher order features (e.g. the strokes in
+units would learn to encode higher order features (e.g.\ the strokes in
 images of handwritten digits in the MNIST data set) and they
 demonstrated that the activity patterns in small hidden layers could
 form well-separated, compressed representations of the corresponding
@@ -161,7 +184,7 @@ pixel intensities by 255.
 
 All RBM networks consisted of two layers, a visible layer with 784
 units corresponding to the 784 pixels in a single MNIST image, and a
-hidden layer of 400 units, i.e. a layer with about half as many units
+hidden layer of 400 units, i.e.\ a layer with about half as many units
 as in the visible layer. A hidden layer with fewer units (and hence
 features) than present in the visible layer ensures that the
 transformation learnt by the RBM does not simply correspond to the
@@ -213,20 +236,21 @@ the subscript ``Data'' thus corresponds to the co-activity state of
 visible unit $i$ and hidden unit $j$ when the visible units are
 clamped at the input sample values. The subscript ``Model'' indicates
 the co-activity state when the latter is not the case.
+The ``Data'' and ``Model'' activity states were sampled using
+contrastive divergence. Specifically, the RBM was initialised with the
+visible unit states set to the values of an input sample, and on that
+basis the hidden unit states were computed. These unit states formed
+the basis of the ``Data'' samples.  To sample the ``Model'' states,
+the network was let to evolve for a number of $CD$ additional backward
+and forward passes of the activity:
 
-The ``Data'' and ``Model'' activity states were sampled using contrastive
-divergence. Specifically, the RBM was initialised with the visible
-unit states set to the values of an input sample, and on that basis
-the hidden unit states were computed. These unit states formed the
-basis of the ``Data'' samples. To sample the ``Model'' states, the network
-was let to evolve for a number of $CD$ additional backward and forward
-passes of the activity:
 \begin{align}
   \label{eq:cd_update_equations}
   \Delta w_{ij} = \Delta w_{ji} &= \eta \Big[\langle p_{i}h_{j} \rangle_{0} - \langle p_{i}h_{j} \rangle_{CD}\Big] \\
   \Delta b_{i}                  &= \eta \Big[\langle p_{i}      \rangle_{0} - \langle p_{i}      \rangle_{CD}\Big] \\
   \Delta b_{j}                  &= \eta \Big[\langle h_{j}      \rangle_{0} - \langle h_{j}      \rangle_{CD}\Big]
 \end{align}
+
 All experiments were performed with $CD=3$ contrastive divergence
 iterations, and a learning rate $\eta = 0.01$.
 
@@ -279,7 +303,7 @@ question if network architectures that are less constrained in their
 connectivity are still able to learn and perform the same
 computation. As a first pass, we hence evaluated the performance of
 RBMs with independently initialised forward and backward weights
-(i.e. $w_ij \neq w_{ji}$) on a standard machine learning data set, the
+(i.e.\ $w_ij \neq w_{ji}$) on a standard machine learning data set, the
 MNIST database of handwritten digits. In analogy to directed graphs,
 we call such an RBM a ``directed'' RBM. Fig.~\ref{fig:directed_rbm}
 compares the performance of a canonical, undirected RBM network with
@@ -343,7 +367,7 @@ initialised network architectures, it could be the driver of learning
 in the directed RBMs by effectively reducing the directed networks to
 approximately undirected networks. To show that this is not the case,
 we compared three sparsely connected RBM variants, namely (1) a
-canonical RBM (i.e. with purely bi-directional connections), (2) a
+canonical RBM (i.e.\ with purely bi-directional connections), (2) a
 directed RBM with independently initialised forward and backward
 connections containing a mix of bi-directional and uni-directional
 connections, and (3) a directed RBM constrained to have purely
@@ -397,7 +421,7 @@ connections is sufficient to train an RBM. Furthermore, as alluded to
 in the introduction, Lillicrap et al. previously showed that neural
 networks can be trained with backpropagation of errors via fixed
 backward weights. By analogy, it thus seemed possible that RBMs could
-be trained by updating only one set of connections, i.e. either the
+be trained by updating only one set of connections, i.e.\ either the
 forward or the backward weights. To test this hypothesis, we compared
 five RBM variants: (1) the canonical RBM network, (2) a directed RBM,
 where as before both, the forward and the backward weights, were
@@ -409,7 +433,7 @@ kept fixed (and only the unit biases were updated). As shown in
 Fig. 4, updating only the backward weights is sufficient for learning
 to reconstruct the inputs with a performance that is comparable to
 (albeit smaller than) the performance of a canonical
-RBM. Interestingly, the ``inverse'' variant, i.e. learning the forward
+RBM. Interestingly, the ``inverse'' variant, i.e.\ learning the forward
 weights while keeping the backward weights fixed also performs better
 than just learning the biases; however, the performance of this RBM
 variant is substantially lower than in the canonical case.
