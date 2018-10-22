@@ -1,0 +1,467 @@
+% Created 2018-10-15 Mon 14:28
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\author{Paul J N Brodersen, Colin J Akerman}
+\date{\today}
+\title{Restricted Boltzmann machines with asymmetric forward and backward weights learn to reconstruct inputs even if the forward weights are kept constant}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 25.1.1 (Org mode 8.2.10)}}
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+In canonical Restricted Boltzmann machines (RBM), connections between
+units are bi-directional, i.e. the connection from unit $i$ to unit
+$j$ is identical to (and has the same weight as) the connection from
+unit $j$ to unit $i$. Here, we relax this symmetry constraint and
+explore RBM variants where the forward and backward connection weights
+are initialised and updated independently from one another. We show
+that RBMs with asymmetric connectivity can still successfully be
+trained with contrastive divergence. Surprisingly, this holds true
+even if the forward, visible-to-hidden layer weights are kept constant
+and only the backward, hidden-to-visible layer weights are updated
+during training.
+\end{abstract}
+
+A restricted Boltzmann machine (RBM) is an artificial neural network
+that in its simplest form consists of two layers of Boltzmann units.
+A Boltzmann unit is a stochastic binary unit that is active with a
+probability that is a function of the sum its connection weights to
+other active units (and a bias term). The connectivity in the network
+is limited ("restricted") to connections between units from different
+layers. The activity of a Boltzmann units is hence independent of the
+activity of other units in the same layer, and only depends on the
+activities of units in the other layer and the weights of its
+connections to those units (as well as an individual bias term).
+
+RBMs were originally developed by Paul Smolensky as a way to learn a
+generative graphical model that abstracts higher order features from a
+set of training inputs \cite{Smolensky1986a}. In this model, the input
+features are represented by the units in one of the layers, which is
+hence referred to as the "visible" layer. The higher order, latent
+features are represented by units in the so-called "hidden" layer.
+The presence or absence of a feature is represented by the activity of
+the corresponding Boltzmann unit, which is either "ON" or "OFF . The
+central idea of the RBM algorithm is to learn a set of weights for the
+connections between the two layers such that the hidden unit activity
+patterns are consistent with visible unit activity patterns for any
+given input. This consistency is achieved if for a set of inputs, if
+the visible unit activities result in hidden unit activities that in
+turn exactly reconstruct the visible unit activities. To reflect this
+consistency criterion, an RBM was originally referred to as a
+"Harmonium". As a result of this consistency criterion, RBMs are
+always also auto-encoders.
+
+Subsequently, Geoff Hinton and colleagues discovered a fast variant of
+the original learning algorithm (contrastive divergence
+\cite{Hinton2002,Carreira-Perpinan2005}) such that this method could be
+applied to complex, non-trivial inputs. They showed that the hidden
+units would learn to encode higher order features (e.g. the strokes in
+images of handwritten digits in the MNIST data set) and they
+demonstrated that the activity patterns in small hidden layers could
+form well-separated, compressed representations of the corresponding
+input patterns \cite{Hinton2006b}. As a consequence, stacks of
+pre-trained RBMs form good initialisations for deep belief nets. Deep
+belief nets are artificial neural networks with multiple
+(\textgreater 3) layers of hidden units that are trained in
+classification of regression tasks using using backpropation of errors
+("backprop") \cite{Rumelhart1986}. Transporting error gradients in these
+networks is often difficult initially, significantly slowing (or even
+halting) gradient descent. Hinton and colleagues showed that
+pre-training with the RBM algorithm significantly improved performance
+of these networks \cite{Hinton2006a,Hinton2006b}. Interestingly, the
+subsequent fine tuning of the hidden layer connectivity with backprop
+turned out to be comparatively small \cite{Erhan2010}.
+
+Although artificial neural networks trained with the RBM algorithm or
+the backprop algorithm were originally envisioned as models for
+biological neuronal networks, both algorithms postulate a symmetric
+connectivity between neurons. In an RBM, the connection from unit $i$
+to unit $j$ is identical to (and has the same weight as) the
+connection from unit $j$ to unit $i$. In backprop, errors w.r.t the
+activity of a neuron $i$ are backpropagated to the neuron $j$ in the
+layer below proportional to the weight of the (forward) connection
+from $j$ to $i$. %
+This symmetry in the connectivity is in contrast to biological
+neuronal networks, where the vast majority of synapses transmit
+information in one direction (with the exception of electrical gap
+junctions), and only an exceedingly small percentage of neurons appear
+bi-directionally connected to each other (although interestingly, in
+the cortex this proportion seems to be higher than chance, at least
+for nearby neuron pairs). %
+Recently, Lillicrap et al. have shown that for backprop this symmetry
+constraint can be abolished \cite{Lillicrap2014}. In their backprop
+variant called "feedback alignment", successive layers are connected
+by distinct forward and backward weights. The forward weights are
+learnt by backpropagating errors arising at the output layer via the
+(distinct!) backward weights to the lower layers. The randomly
+initialised backward weights are kept fixed for the entirety of
+training. Despite the random feedback error, such a network rapidly
+learns to performs the task as well as a network trained with the
+canonical backpropation algorithm.
+
+In this paper, we investigate whether the symmetry constraint on the
+connectivity of an RBM can similarly be relaxed while retaining a high
+performance, and we show that this is indeed the case in two different
+ways: %
+First, we show that an RBM with distinctly initialised forward and
+backward weights can still successfully learn the task. However, as
+the same weight updates are applied to the forward and backward
+weights, one might argue that this is unsurprising as forward and
+backward weights can become sufficiently similar with learning as long
+as the cumulative weight changes are sufficiently large. We hence
+demonstrate that this finding remains true in a sparse network that
+does not have any bi-directional connections. %
+Second, we show that it is sufficient to update the backward weights
+in order to learn to reconstruct a set of inputs. This is reminiscent
+of feedback alignment, only that in this case the forward weights are
+kept constant and the backward weights are learnt. %
+These findings have significant implications for the development of
+novel RBM variants and for the plausibility of RBM-like networks as
+models for biological neuronal networks.
+
+\section{Methods}
+
+\subsection{Data acquisition and pre-processing}
+
+All experiments were carried out using images from the MNIST database
+of handwritten digits, which was retrieved from
+\url{http://yann.lecun.com/exdb/mnist/}. The original train and test split
+of the data set was retained. Example inputs and example
+reconstructions correspond to the first 100 samples in the test data
+set. As the states of the visible units are constrained to be between
+0 and 1, all inputs were normalized to this range by dividing all
+values by 255.
+
+\subsection{The restricted Boltzmann machine}
+
+All RBM networks consisted of two layers, a visible layer with 784
+units corresponding to the 784 pixels in a single MNIST image, and a
+hidden layer of 400 units, i.e. a layer with about half as many units
+as in the visible layer. A hidden layer with fewer units (and hence
+features) than present in the visible layer ensures that the
+transformation learnt by the RBM does not simply correspond to the
+identity transform, and demonstrates the ability of the RBM to
+compress the set of input features to a set of hidden features.
+
+All hidden layer units were modelled as Boltzmann units. A Boltzmann
+unit is in the active state with the probability given by the logistic
+function of the sum of (1) its inputs from visible units and (2) a
+bias term:
+\begin{equation}
+  p_j = p(h_j = 1) = \sigma(b_j + \sum_i v_i * w_{ij})
+\end{equation}
+
+Here, $i$ and $j$ index the visible units $v_i$ and hidden units $h_j$,
+respectively, $b$ is the bias term associated with each unit, and
+$w_ij$ is the weight of the connection from $v_i$ to $h_j$. The function
+$\sigma$ represents the logistic function, which is defined as
+\begin{equation}
+  \sigma(x) = \frac{1}{1 + e^{-x}}.
+\end{equation}
+
+Visible layer units were modelled similarly:
+\begin{equation}
+  p_i = p(v_i = 1) = \sigma(b_i + \sum_j h_j * w_{ji}).
+\end{equation}
+
+However, unlike hidden layer units which transmitted their binary
+state to visible units, visible units transmitted the probability of
+being active $p_i$ instead of their state $v_i$. Such a procedure has
+previously been suggested to reduce sampling noise and thus speed up
+learning \cite{Hinton2012}. Strictly speaking, the visible units are
+hence modelled not as Boltzmann units but as logistic units.
+
+\subsection{Weight and bias updates}
+
+In general, weights and biases were updated according to the canonical RBM update rules:
+\begin{align}
+  \label{eq:rbm_update_equations}
+  \Delta w_{ij} = \Delta w_{ji} &\propto \langle p_{i}h_{j} \rangle_{\text{Data}} - \langle p_{i}h_{j} \rangle_{\text{Model}} \\
+  \Delta b_{i}                  &\propto \langle p_{i}      \rangle_{\text{Data}} - \langle p_{i}      \rangle_{\text{Model}} \\
+  \Delta b_{j}                  &\propto \langle h_{j}      \rangle_{\text{Data}} - \langle h_{j}      \rangle_{\text{Model}}
+\end{align}
+
+The variable $\eta$ correponds to the learning rate. As before, $p_i$ is
+the probability of the visible unit $i$ to be active, $h_j$ is the
+activity state of hidden unit $j$, and $w_{ij}$ is the weight of the
+connection from $i$ to $j$. The term $\langle p_{i}h_{j} \rangle$ with the
+subscript "Data" thus corresponds to the co-activity state of visible
+unit $i$ and hidden unit $j$ when the visible units are clamped at the
+input sample values. The subscript "Model" indicates the co-activity
+state when the latter is not the case.
+
+The "Data" and "Model" activity states were sampled using contrastive
+divergence. Specifically, the RBM was initialised with the visible
+unit states set to the values of an input sample, and on that basis
+the hidden unit states were computed. These unit states formed the
+basis of the "Data" samples. To sample the "Model" states, the network
+was let to evolve for a number of $CD$ additional backward and forward
+passes of the activity:
+\begin{align}
+  \label{eq:cd_update_equations}
+  \Delta w_{ij} = \Delta w_{ji} &= \eta \Big[\langle p_{i}h_{j} \rangle_{0} - \langle p_{i}h_{j} \rangle_{CD}\Big] \\
+  \Delta b_{i}                  &= \eta \Big[\langle p_{i}      \rangle_{0} - \langle p_{i}      \rangle_{CD}\Big] \\
+  \Delta b_{j}                  &= \eta \Big[\langle h_{j}      \rangle_{0} - \langle h_{j}      \rangle_{CD}\Big]
+\end{align}
+All experiments were performed with $CD=3$ contrastive divergence
+iterations, and a learning rate $\eta = 0.01$.
+
+% When training RBM networks with constant forward weights, backward
+% weights or both, we furthermore enforced a target probability $q_j$ in
+% the hidden units activity by adding a small penalty $\delta$ to the
+% weight and hidden unit bias updates:
+
+% \begin{align}
+%   \label{eq:sparsity_penalty}
+%   \delta_{j}                    &= \theta \Big[q_{j} - \langle h_{j} \rangle\Big] \\
+%   \Delta w_{ij} = \Delta w_{ji} &= \eta \Big[\langle p_{i}h_{j} \rangle_{0} - \langle p_{i}h_{j} \rangle_{CD} + \delta_{j}\Big]\\
+%   \Delta b_{j}                  &= \eta \Big[\langle h_{j}      \rangle_{0} - \langle h_{j}      \rangle_{CD} + \delta_{j}\Big]
+% \end{align}
+
+% This ensured that the majority of hidden units were not always active
+% or inactive, which otherwise tended to be the case in these networks.
+% The sparsity cost $\theta$ was set to unity.
+
+\subsection{Weight and bias initialisation}
+
+Unless stated otherwise, biases were initialised with 0. All weights
+were initialised with values drawn from the normal distribution
+$N(0.0, 0.1)$.
+
+% Fixed weights were drawn from the normal distribution $N(0.0,
+% 1.0)$. Fixed weights were (initially) thus much larger than learnt
+% weights, ensuring that even after learning, the activities of units
+% receiving inputs only via fixed weights were still sensitive to the
+% input from units in the other layer, and not completely dominated by
+% their biases.
+
+\subsection{Software implementation}
+
+The code to reproduce all experiments shown in the figures below can
+be accessed at \url{https://github.com/paulbrodersen/rbm_variants}. The
+MNIST data was loaded into memory using the python-mnist package. All
+RBM variants were implemented in python. Numerical computations relied
+in part on functions from the numpy package. All visualisation were
+made using the matplotlib package.
+
+\section{Results}
+
+\subsection{Restricted Boltzmann machines with independent and asymmetric forward and backward weights learn to reconstruct inputs}
+
+A canonical RBM forms an undirected graph: if neuron $i$ is connected
+to neuron $j$ with weight $w_{ij}$ then neuron $j$ is connected to
+neuron $i$ with weight $w_{ji} = w_{ij}$. We are interested in the
+question if network architectures that are less constrained in their
+connectivity are still able to learn and perform the same
+computation. As a first pass, we hence tested the RBMs, for which the
+forward and backward weights were initialised independently
+(i.e. $w_ij \neq w_{ji}$) on a standard machine learning data set, the
+MNIST database of handwritten digits. Fig.~\ref{fig:directed_rbm}
+compares the performance of a canonical, undirected RBM network with
+the performance of such a directed RBM with distinct forward and
+backward weights. Clearly, the directed RBM is still able to learn to
+reconstruct the MNIST digits, albeit with a marginally lower
+performance.
+
+\begin{figure}[H]
+  \label{fig:directed_rbm}
+  \centering
+  \includegraphics[width=\linewidth]{../figures/figure_1/f1.pdf}
+  \caption{\footnotesize
+    \textbf{Distinct, asymmetric forward and backward weights are sufficient for learning:}
+    A canonical RBM and a directed RBM were trained to reconstruct
+    images in the MNIST handwritten digits database.
+    Each RBM consisted of 784 visible units and 400 hidden units.
+    Biases and connection weights were updated using contrastive
+    divergence with 3 iterations and a learning rate $\eta=0.01$.
+    a) Images of the first 100 characters in the MNIST test set.
+    b) Cartoon representation of a canonical RBM. The backward weight
+    matrix $w^T$ is the transpose of the forward weight matrix $w$.
+    c) Cartoon representation of a directed RBM. The forward weight
+    matrix $w_F$ is distinct of the backward weight matrix $w_B$.
+    d) Canonical RBM example reconstructions of the first 100
+    characters in the test set after 10 epochs of learning on the
+    training set.
+    e) The corresponding directed RBM example reconstructions.
+    f) Mean squared error between the input images and RBM
+    reconstructions for the test set plotted against the number of
+    training samples.
+    g) Final mean squared error after 10 epochs. Error bars correspond
+    to the standard deviation around the mean ($n = 10$).
+  }
+\end{figure}
+
+However, as we have not changed the weight update rules for the
+directed RBMs, the same weight updates are applied to the forward and
+backward weights. Over time, as sufficiently large weight changes
+accumulate, the forward and backward weight matrices become more
+similar to one another. This effect can be seen in
+Fig.~\ref{fig:weight_alignment}, which plots forward weights against
+backward weights before and after training. Clearly, the forward and
+backward weights align to one another with learning, as indicated by
+the elongation of the data along the $x=y$ axis.
+
+\begin{figure}[H]
+  \label{fig:weight_alignment}
+  \centering
+  \includegraphics[width=1.0\linewidth]{../figures/supplementary_1/s1.pdf}
+  \caption{\textbf{Forward and backward weights in directed RBMs
+      become more similar with training}
+    Forward weights $w_{ij}$ plotted against the corresponding
+    backward weights $W_{ji}$ before and after training a directed RBM
+    network for 10 epochs on MNIST.
+  }
+\end{figure}
+
+Although the weight alignment tends to be small for sensibly
+initialised network architectures, it could be the driver of learning
+in the directed RBMs by effectively reducing the directed networks to
+approximately undirected networks. To show that this is not the case,
+we compared three sparsely connected RBM variants, namely (1) a
+canonical RBM (i.e. with purely bi-directional connections), (2) a
+directed RBM with independently initialised forward and backward
+connections containing a mix of bi-directional and uni-directional
+connections, and (3) a directed RBM constrained to have purely
+uni-directional connections.
+% As can be seen in Fig.~\ref{fig:unidirectional_connections}, the
+% performance of a directed RBM constrained to have purely
+% uni-directional connections is comparable to the performance of a
+% directed RBM containing a mix of bi-directional and uni-directional
+% connections. As before, both directed RBM variants performed slightly
+% worse than the canonical RBM.
+As can be seen in Fig.~\ref{fig:unidirectional_connections}, RBM
+performance decreases with a decrease in the number of bi-directional
+connections. However, the absolute performance decrease from an RBM
+with purely bi-directional connections to a RBM with purely
+uni-directional connections is with 1.3\% overall very small.
+These findings show that weight alignment is not necessary
+for learning but that learning uni-directional connections is
+sufficient for training an RBM. Perfect symmetry in the forward and
+backward connectivity thus may confer some advantage in learning, but
+is clearly not necessary.
+
+\begin{figure}[H]
+  \label{fig:unidirectional_connections}
+  \centering
+  \includegraphics[width=0.8\linewidth]{../figures/figure_2/f2.pdf}
+  \caption{\footnotesize
+    \textbf{Uni-directional connections are sufficient for learning:}
+    Three sparsely connected RBM variants with differing proportion of bi-directional connections were trained for 10 epochs on the MNIST handwritten digit data set.
+    As before, each RBM consisted of 784 visible units and 400 hidden units,
+    and biases and connection weights were updated using contrastive divergence with 3 iterations and a learning rate $\eta=0.01$.
+    However, the connectivity between units in different layers was sparse ($p=0.5$),
+    and the three variants differed in the proportion of
+    bi-directional connections ($w_{ij} \neq 0 \land w_{ji} \neq 0$),
+    which was set to 1.0 (first column), 0.25 (second column), and 0.0
+    (third column).
+    a)~-~c) Cartoon representation of RBM variants.
+    d)~-~f) Example reconstructions of the first 100 characters in the test set after 10 epochs of learning on the training set.
+    g)~-~i) Size of the forward weights $w_{ij}$ versus the corresponding backward weights $w_{ji}$ for an example network after training for 10 epochs.
+    j) Mean squared error between the input images and RBM reconstructions for the test set plotted against the number of training samples.
+    k) Final mean squared error after 10 epochs. Error bars correspond to the standard deviation around the mean ($n = 10$).
+  }
+\end{figure}
+
+\subsection{Updating the backward weights is sufficient for learning}
+
+In the previous section, we showed that learning uni-directional
+connections is sufficient to train an RBM. Furthermore, as alluded to
+in the introduction, Lillicrap et al. previously showed that neural
+networks can be trained via backpropagation of errors via fixed
+backward weights. By analogy, it thus seemed possible that RBMs could
+be trained by updating only one set of connections, i.e. either the
+forward or the backward weights. To test this hypothesis, we compared
+five RBM variants: (1) the canonical RBM network, (2) a directed RBM,
+where as before both, the forward and the backward weights, are
+updated, 3) a directed RBM, where the forward weights are kept fixed
+and the backward weights are updated, 4) a directed RBM, where the
+forward weights are updated and the backward weights are kept fixed,
+and (5) a directed RBM, where both, forward and backward weights, are
+kept fixed (and only the unit biases are updated). As shown in Fig. 4,
+updating only the backward weights is sufficient for learning to
+reconstruct the inputs with a performance that is comparable to
+(albeit smaller than) the performance of a canonical
+RBM. Interestingly, the "inverse" variant, i.e. learning the forward
+weights while keeping the backward weights fixed also performs better
+than just learning the biases; however, the performance of this RBM
+variant is substantially lower than in the canonical case.
+
+\begin{figure}[H]
+  \label{fig:backward_rbm}
+  \centering
+  \includegraphics[width=\linewidth]{../figures/figure_3/f3.pdf}
+  \caption{\footnotesize
+    \textbf{Updating the backward weights is sufficient for learning:}
+    A canonical RBM and four directed RBM variants were trained for 10 epochs on the MNIST handwritten digit data set.
+    As before, each RBM consisted of 784 visible units and 400 hidden
+    units, and biases and connection weights were updated using contrastive
+    divergence with 3 iterations and a learning rate $\eta=0.01$.
+    a)~-~e) Cartoon representation of RBM variants.
+    f)~-~j) Example reconstructions of the first 100 characters in the test set after 10 epochs of learning on the training set.
+    k) Mean squared error between the input images and RBM reconstructions for the test set plotted against the number of training samples.
+    l) Final mean squared error after 10 epochs. Error bars correspond to the standard deviation around the mean ($n = 10$).
+  }
+\end{figure}
+
+\section{Discussion}
+
+In summary, the symmetry constraint imposed on the forward and
+backward weights in the canonical RBM is not necessary for
+learning. Instead, even directed networks with strictly
+uni-directional connections are still able to learn, as are networks,
+in which only the backward weights are updated. %
+These findings indicate that there is a family of network
+architectures with diverse connectivity schemes that support RBM-like
+learning, and this diversity, in turn, opens up the possibility that
+some biological neuronal networks may learn to extract features from
+their sensory inputs using RBM-like mechanisms. %
+Nevertheless, it is worth noting that the canonical RBM outperforms
+all other variants explored here. This indicates that bi-directional,
+or even symmetric connections may bequeath a fundamental advantage for
+learning certain relationships. Interestingly -- and as mentioned
+above -- bi-directional connections -- while rare -- still seem to be
+more common in the brain than expected by chance, and the findings
+reported here might point towards reasons why that is the case.
+
+There are several obvious avenues of future work. %
+First, although the performance gain due to perfect symmetry is small,
+it would stil be interesting to understand why it exists at all. %
+Secondly, it remains to be seen if the RBM variants explored here
+generalise to architectures with several hidden layers. Stacks of RBMs
+are often used to initialise deep belief nets that are then trained
+with backpropagation. Such an initialisation is known to often lead to
+improved results, in particular if the amount of labelled training
+data is limited. It would be interesting to see if these RBM variants
+explored here can also form good initialisations for deep
+architectures. %
+Finally, the fact that updating the backward weights is sufficient for
+learning frees up the forward weights to be used to learn other,
+potentially unrelated functions of the input. As learning in feedback
+alignment only requires updating the forward weights, it should be
+possible to combine both learning rules. The resulting network would
+learn to reconstruct and classify inputs simultaneously.
+
+\section{References}
+\bibliography{references}
+\bibliographystyle{apalike}
+% Emacs 25.1.1 (Org mode 8.2.10)
+\end{document}
