@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Experiments to produce panels for Fig. 1 in Brodersen et al (2018).
+Experiments to produce panels for Fig. 1 in Brodersen et al (2019).
 
 These simulations show that RBMs with independent and asymmetric forward
 and backward weights learn to reconstruct inputs.

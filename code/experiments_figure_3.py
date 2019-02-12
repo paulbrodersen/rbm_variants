@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Experiments to produce panels for Fig. 3 in Brodersen et al (2018).
+Experiments to produce panels for Fig. 3 in Brodersen et al (2019).
 
 These plots show that updating the backward weights is sufficient for learning.
 """

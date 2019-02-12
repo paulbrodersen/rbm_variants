@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Experiments to roduce panels for Fig. 2 in Brodersen et al (2018).
+Experiments to roduce panels for Fig. 2 in Brodersen et al (2019).
 
 These plots show that uni-directional connections are sufficient for learning.
 """

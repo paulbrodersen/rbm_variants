@@ -2,7 +2,7 @@
 
 """
 Train RBM variants to reconstruct MNIST digits, and
-reproduce graphs in Brodersen et al (2018).
+reproduce graphs in Brodersen et al (2019).
 """
 
 import numpy as np
