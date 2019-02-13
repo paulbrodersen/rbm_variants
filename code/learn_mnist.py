@@ -278,6 +278,7 @@ if __name__ == '__main__':
                               RestrictedBoltzmannMachine, DirectedRBM)
     network_layout = dict(layers=[LogisticLayer(784), BoltzmannLayer(400)])
     experiments = []
+
     # for ii, s in enumerate([0.5, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0]):
     #     experiments.append([DirectedRBM,
     #                         dict(scale_forward_weights_by=s, scale_backward_weights_by=0.1, **network_layout),
@@ -297,7 +298,7 @@ if __name__ == '__main__':
     #               experiments_figure_2 + \
     #               experiments_figure_3
 
-    from experiments_figure_3 import experiments
+    from experiments_figure_4 import experiments
 
     # --------------------------------------------------------------------------------
     # run experiments and plot outputs
