@@ -106,6 +106,75 @@ def shuffle(arr):
     return arr
 
 
+# def characterise_model(model, init_params,
+#                        train_params, test_params,
+#                        inputs_train, inputs_test,
+#                        test_at,
+#                        total_batches=None,
+#                        total_repetitions=3,
+#                        return_anns=False):
+
+#     total_train_batches, batch_size, total_input_features = inputs_train.shape
+
+#     if total_batches is None:
+#         total_batches = total_train_batches
+
+#     total_tests = len(test_at)
+#     error   = np.full((total_repetitions, total_tests), np.nan) # output array
+#     loss    = np.full_like(error, np.nan)
+#     # samples = np.arange(0, total_batches*batch_size+1, batch_size*test_every)
+#     samples = batch_size * test_at
+#     anns    = []
+
+#     for rep in range(total_repetitions):
+
+#         tic = time.time()
+
+#         ann = model(**init_params)
+
+#         if rep == 0: # print model specifications
+#             print
+#             print('--------------------------------------------------------------------------------')
+#             print(ann)
+#             print
+#             for key, value in init_params.items():
+#                 print("  {}: {}".format(key, value))
+#             for key, value in train_params.items():
+#                 print("  {}: {}".format(key, value))
+#             print
+
+#         inputs_train  = shuffle(inputs_train.reshape(-1, total_input_features))
+#         inputs_train  = make_batches(inputs_train, batch_size)
+
+#         total_batches_trained = 0
+#         for ii in range(total_tests):
+#             if test_at[ii] - total_batches_trained > 0:
+#                 indices = np.arange(total_batches_trained, test_at[ii])
+#                 super_batch = np.take(inputs_train, indices=indices, axis=0, mode='wrap')
+#                 ann.train(super_batch, **train_params)
+#                 total_batches_trained = test_at[ii]
+
+#             loss[rep,ii] = ann.test(inputs_test, **test_params)
+
+#             stdout.write('\r{:5d} of {:5d} total batches;'.format(rep*total_batches+test_at[ii], total_batches*total_repetitions))
+#             stdout.write(' repetition: {:2d}; batch: {:3d};'.format(rep+1, test_at[ii]))
+#             stdout.write(' loss: {:.3f}'.format(loss[rep,ii]))
+#             stdout.flush()
+
+#         stdout.write('\n')
+
+#         toc = time.time()
+#         stdout.write('Time elapsed: {:.1f} s\n'.format(toc-tic))
+
+#         stdout.flush()
+
+#         anns.append(ann)
+
+#     if return_anns:
+#         return loss, samples, anns
+#     else:
+#         return loss, samples
+
 def characterise_model(model, init_params,
                        train_params, test_params,
                        inputs_train, inputs_test,
@@ -119,11 +188,9 @@ def characterise_model(model, init_params,
     if total_batches is None:
         total_batches = total_train_batches
 
-    total_tests = len(test_at)
-    error   = np.full((total_repetitions, total_tests), np.nan) # output array
-    loss    = np.full_like(error, np.nan)
-    # samples = np.arange(0, total_batches*batch_size+1, batch_size*test_every)
-    samples = batch_size * test_at
+    total_layers = len(init_params['layers'])
+    loss   = np.full((total_repetitions, len(test_at) * (total_layers -1)), np.nan) # output array
+    samples = np.tile(batch_size * test_at, (total_layers -1))
     anns    = []
 
     for rep in range(total_repetitions):
@@ -143,23 +210,12 @@ def characterise_model(model, init_params,
                 print("  {}: {}".format(key, value))
             print
 
+        print("Repetition {} / {}".format(rep+1, total_repetitions))
+
         inputs_train  = shuffle(inputs_train.reshape(-1, total_input_features))
         inputs_train  = make_batches(inputs_train, batch_size)
 
-        total_batches_trained = 0
-        for ii in range(total_tests):
-            if test_at[ii] - total_batches_trained > 0:
-                indices = np.arange(total_batches_trained, test_at[ii])
-                super_batch = np.take(inputs_train, indices=indices, axis=0, mode='wrap')
-                ann.train(super_batch, **train_params)
-                total_batches_trained = test_at[ii]
-
-            loss[rep,ii] = ann.test(inputs_test, **test_params)
-
-            stdout.write('\r{:5d} of {:5d} total batches;'.format(rep*total_batches+test_at[ii], total_batches*total_repetitions))
-            stdout.write(' repetition: {:2d}; batch: {:3d};'.format(rep+1, test_at[ii]))
-            stdout.write(' loss: {:.3f}'.format(loss[rep,ii]))
-            stdout.flush()
+        loss[rep] = ann.train(inputs_train, inputs_test, test_at, test_params, **train_params)
 
         stdout.write('\n')
 

@@ -6,6 +6,7 @@ Implements variants of restricted Boltzmann machines trained with contrastive di
 
 import numpy as np
 
+from sys import stdout
 from copy import deepcopy
 from utils import get_cosine_similarity, get_mean_squared_error
 
@@ -170,7 +171,42 @@ class RestrictedBoltzmannMachine(object):
 
         return outputs
 
-    def train(self, inputs, cd=1, eta=0., *args, **kwargs):
+    # def train(self, inputs, cd=1, eta=0., *args, **kwargs):
+    #     """
+    #     Train a stack of layers (n>2) in a bottom-up / greedy fashion:
+    #     1) Train the lowest pair of layers using the training inputs.
+    #     2) Create a new set of inputs by sampling from the activity in the upper layer.
+    #     3) Repeat step 1) with the next pair of layers.
+
+    #     Arguments:
+    #     ----------
+    #     inputs : (batches, samples, features) ndarray
+    #     cd : int (default 1)
+    #     eta : float (default 0.)
+
+    #     Returns:
+    #     --------
+    #     None (updates attributes of self.layers)
+    #     """
+
+    #     for ii in range(len(self.layers)-1):
+    #         # train a pair of layers
+    #         visible = self.layers[ii]
+    #         hidden = self.layers[ii+1]
+
+    #         visible, hidden = self.train_layer_pair(inputs, visible, hidden, cd, eta, *args, **kwargs)
+
+    #         self.layers[ii] = visible
+    #         self.layers[ii+1] = hidden
+
+    #         if ii == (len(self.layers)-2): # i.e. processing the last layer pair
+    #             break
+
+    #         # sample activities in the positive / data phase from upper layer
+    #         # to provide training samples for the next pair of layers
+    #         inputs = self._apply_transform(inputs, [visible, hidden])
+
+    def train(self, inputs_train, inputs_test, test_at, test_params, cd=1, eta=0., *args, **kwargs):
         """
         Train a stack of layers (n>2) in a bottom-up / greedy fashion:
         1) Train the lowest pair of layers using the training inputs.
@@ -185,25 +221,44 @@ class RestrictedBoltzmannMachine(object):
 
         Returns:
         --------
-        None (updates attributes of self.layers)
+        loss :
         """
 
+        loss = np.full((len(self.layers)-1, len(test_at)), np.nan)
+
+        # loop over successive layer pairs and train one pair at a time
         for ii in range(len(self.layers)-1):
             # train a pair of layers
             visible = self.layers[ii]
             hidden = self.layers[ii+1]
 
-            visible, hidden = self.train_layer_pair(inputs, visible, hidden, cd, eta, *args, **kwargs)
+            total_batches_trained = 0
+            for jj, next_total_batches_trained in enumerate(test_at):
 
-            self.layers[ii] = visible
-            self.layers[ii+1] = hidden
+                if next_total_batches_trained - total_batches_trained > 0: # i.e. skip edge case where we are not training at all
 
-            if ii == (len(self.layers)-2): # i.e. processing the last layer pair
-                break
+                    indices = np.arange(total_batches_trained, next_total_batches_trained)
+                    super_batch = np.take(inputs_train, indices=indices, axis=0, mode='wrap')
 
-            # sample activities in the positive / data phase from upper layer
-            # to provide training samples for the next pair of layers
-            inputs = self._apply_transform(inputs, [visible, hidden])
+                    visible, hidden = self.train_layer_pair(super_batch, visible, hidden, cd, eta, *args, **kwargs)
+                    self.layers[ii] = visible
+                    self.layers[ii+1] = hidden
+
+                    total_batches_trained = next_total_batches_trained
+
+                loss[ii, jj] = self._test(inputs_test, layers=self.layers[:ii+2],  **test_params)
+
+                # stdout.write('\r{:5d} of {:5d} total batches;'.format(rep*total_batches+test_at[ii], total_batches*total_repetitions))
+                stdout.write('\r    layers: {:1d} + {:1d}; batches trained: {:6d};'.format(ii, ii+1, total_batches_trained))
+                stdout.write(' loss: {:.3f}'.format(loss[ii, jj]))
+                stdout.flush()
+
+            if ii < (len(self.layers)-2): # i.e. we have not processed the last layer pair yet
+                # sample activities in the positive / data phase from previously trained layers
+                # to provide training samples for the next pair of layers
+                inputs_train = self._apply_transform(inputs_train, [visible, hidden])
+
+        return loss.ravel()
 
     def _test(self, inputs, layers, loss_function, plot_function):
 
