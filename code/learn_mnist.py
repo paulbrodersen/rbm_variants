@@ -322,7 +322,7 @@ if __name__ == '__main__':
                                            inputs_test       = inputs_test,
                                            test_at           = test_at,
                                            total_batches     = test_at[-1],
-                                           total_repetitions = 10)
+                                           total_repetitions = 3)
 
         np.savez('../data/results_' + fname,
                  loss         = loss,
