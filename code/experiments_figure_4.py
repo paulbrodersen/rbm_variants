@@ -20,5 +20,5 @@ network_layout = dict(layers=[LogisticLayer(784), BoltzmannLayer(1000), Boltzman
 
 # parameters
 experiments = []
-experiments.append([RestrictedBoltzmannMachine, dict(scale_weights_by=0.1,                                        **network_layout), dict(cd=3, eta=0.01),                                              '#1f77b4',    'Canonical RBM',                                  'f4_canonical_rbm'])
+experiments.append([RestrictedBoltzmannMachine, dict(scale_weights_by=1.,                                        **network_layout), dict(cd=3, eta=0.01),                                              '#1f77b4',    'Canonical RBM',                                  'f4_canonical_rbm'])
 # experiments.append([DirectedRBM,                dict(scale_forward_weights_by=0.1, scale_backward_weights_by=0.1, **network_layout), dict(cd=3, eta=0.01, update_forward=True,  update_backward=True ), '#9467bd',    'Directed RBM',                                   'f4_directed_rbm'])
