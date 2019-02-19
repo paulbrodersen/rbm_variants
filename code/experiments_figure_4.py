@@ -21,7 +21,7 @@ network_layout = dict(layers=[LogisticLayer(784), BoltzmannLayer(1000), Boltzman
 # parameters
 experiments = []
 
-for ii, s in enumerate([0.1, 1.0, 10.]):
+for ii, s in enumerate([0.1, 0.5, 1., 5., 10.]):
     experiments.append([RestrictedBoltzmannMachine,
                         dict(scale_weights_by=s, **network_layout),
                         dict(cd=3, eta=0.01),
