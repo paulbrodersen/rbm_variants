@@ -276,20 +276,7 @@ if __name__ == '__main__':
 
     from rbm_variants import (LogisticLayer, BoltzmannLayer,
                               RestrictedBoltzmannMachine, DirectedRBM)
-    network_layout = dict(layers=[LogisticLayer(784), BoltzmannLayer(400)])
     experiments = []
-
-    # for ii, s in enumerate([0.5, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0]):
-    #     experiments.append([DirectedRBM,
-    #                         dict(scale_forward_weights_by=s, scale_backward_weights_by=0.1, **network_layout),
-    #                         dict(cd=3, eta=0.01, update_forward=False),
-    #                         colors[ii], '$|w^F| = {}$'.format(s), 'test_{}'.format(ii)])
-
-    # for ii, cd in enumerate([1, 2, 3, 4, 5]):
-    #     experiments.append([DirectedRBM,
-    #                         dict(scale_forward_weights_by=0.1, scale_backward_weights_by=0.1, **network_layout),
-    #                         dict(cd=cd, eta=0.01, update_forward=False),
-    #                         colors[ii], '$cd = {}$'.format(cd), 'test_{}'.format(ii)])
 
     # from experiments_figure_1 import experiments as experiments_figure_1
     # from experiments_figure_2 import experiments as experiments_figure_2
