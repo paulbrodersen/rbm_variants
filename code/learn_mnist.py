@@ -274,10 +274,6 @@ if __name__ == '__main__':
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = prop_cycle.by_key()['color']
 
-    from rbm_variants import (LogisticLayer, BoltzmannLayer,
-                              RestrictedBoltzmannMachine, DirectedRBM)
-    experiments = []
-
     # from experiments_figure_1 import experiments as experiments_figure_1
     # from experiments_figure_2 import experiments as experiments_figure_2
     # from experiments_figure_3 import experiments as experiments_figure_3
