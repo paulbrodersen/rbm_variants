@@ -10,9 +10,15 @@ TODO:
 
 """
 
+import matplotlib.pyplot as plt
+
 from rbm_variants import (LogisticLayer, BoltzmannLayer,
                           RestrictedBoltzmannMachine, DirectedRBM,
 )
+
+
+prop_cycle = plt.rcParams['axes.prop_cycle']
+colors = prop_cycle.by_key()['color']
 
 # network layout
 # network_layout = dict(layers=[LogisticLayer(784), BoltzmannLayer(1000)])

@@ -271,9 +271,6 @@ if __name__ == '__main__':
     # --------------------------------------------------------------------------------
     # import experiments
 
-    prop_cycle = plt.rcParams['axes.prop_cycle']
-    colors = prop_cycle.by_key()['color']
-
     # from experiments_figure_1 import experiments as experiments_figure_1
     # from experiments_figure_2 import experiments as experiments_figure_2
     # from experiments_figure_3 import experiments as experiments_figure_3
