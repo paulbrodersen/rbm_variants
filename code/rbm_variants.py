@@ -252,6 +252,10 @@ class RestrictedBoltzmannMachine(object):
                 stdout.write(' loss: {:.3f}'.format(loss[ii, jj]))
                 stdout.flush()
 
+            # new line after finishing training for the current layer pair
+            stdout.write('\n')
+            stdout.flush()
+
             if ii < (len(self.layers)-2): # i.e. we have not processed the last layer pair yet
                 # sample activities in the positive / data phase from previously trained layers
                 # to provide training samples for the next pair of layers
