@@ -228,7 +228,6 @@ class RestrictedBoltzmannMachine(object):
 
         # loop over successive layer pairs and train one pair at a time
         for ii in range(len(self.layers)-1):
-            # train a pair of layers
             visible = self.layers[ii]
             hidden = self.layers[ii+1]
 
@@ -246,7 +245,7 @@ class RestrictedBoltzmannMachine(object):
 
                     total_batches_trained = next_total_batches_trained
 
-                loss[ii, jj] = self._test(inputs_test, layers=self.layers[:ii+2],  **test_params)
+                loss[ii, jj] = self._test(inputs_test, layers=self.layers[:ii+2],  **test_params) # i.e. including the ith + 1 layer
 
                 # stdout.write('\r{:5d} of {:5d} total batches;'.format(rep*total_batches+test_at[ii], total_batches*total_repetitions))
                 stdout.write('\r    layers: {:1d} + {:1d}; batches trained: {:6d};'.format(ii, ii+1, total_batches_trained))
