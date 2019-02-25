@@ -355,3 +355,5 @@ if __name__ == '__main__':
         fig2.tight_layout()
         fig2.savefig('../figures/tmp/final_performance.pdf', dpi=300)
         fig2.savefig('../figures/tmp/final_performance.svg', dpi=300)
+
+    import ipdb; ipdb.set_trace()
