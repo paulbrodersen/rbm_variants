@@ -215,7 +215,10 @@ class RestrictedBoltzmannMachine(object):
 
         Arguments:
         ----------
-        inputs : (batches, samples, features) ndarray
+        inputs_train : (total batches, total samples, total features) ndarray
+        inputs_test : (total test samples, total features) ndarray
+        test_at : (tests, ) ndarray
+        test_params : dict
         cd : int (default 1)
         eta : float (default 0.)
 
