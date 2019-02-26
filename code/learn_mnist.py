@@ -315,7 +315,11 @@ if __name__ == '__main__':
         # plot loss versus time
 
         if np.any(samples==0):
-            samples[samples==0] = 1 # show first data point if x-axis is log-scaled
+            # break the line at whenever we return to x = 0
+            samples[samples==0] = np.nan
+            # show first data point if x-axis is log-scaled
+            if samples[0] == 0:
+                samples[0] = 1
 
         ax.errorbar(x=samples, y=loss.mean(axis=0),
                     yerr=loss.std(axis=0), errorevery=1,
