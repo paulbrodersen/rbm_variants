@@ -262,11 +262,11 @@ if __name__ == '__main__':
     inputs_train = rescale(inputs_train, 0., 1.)
     inputs_test  = rescale(inputs_test,  0., 1.)
 
-    batch_size = 100
+    batch_size = 10
     inputs_train  = make_balanced_batches(inputs_train, labels_train, batch_size)
 
     total_epochs = 10
-    test_at = np.r_[[0, 1, 3, 6, 10, 30, 60, 100, 300], np.arange(1, total_epochs+1) * 600] # in batches
+    test_at = np.r_[[0, 10, 30, 60, 100, 300, 600, 1000, 3000], np.arange(1, total_epochs+1) * 6000] # in batches
 
     # --------------------------------------------------------------------------------
     # import experiments
