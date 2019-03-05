@@ -99,7 +99,58 @@ def make_batches(arr, batch_size=100):
     return arr
 
 
-def shuffle(arr):
+def make_balanced_batches(arr, labels, batch_size=100):
+
+    # assert that it is possible to make a balanced batches
+    unique_labels, inverse = np.unique(labels, return_inverse=True)
+    total_labels = len(unique_labels)
+    assert batch_size % total_labels == 0, \
+        "Cannot create balanced batches given {} unique labels and a batch size of {}".format(total_labels, batch_size)
+    repeats_per_batch = int(batch_size / total_labels)
+
+    # figure out maximum number of possible batches
+    counts = np.bincount(inverse)
+    total_count_rarest_label = np.min(counts)
+    total_batches = int(total_count_rarest_label / (batch_size * repeats_per_batch))
+
+    # sort indices into batches
+    order = np.argsort(labels)
+    indices = np.zeros((total_labels, total_count_rarest_label), dtype=np.int)
+    for ii, label in enumerate(unique_labels):
+        indices[ii] = order[labels == label][:total_count_rarest_label]
+
+    # create batches
+    _, total_features = arr.shape
+    new_arr = np.zeros((total_batches, batch_size, total_features))
+    for ii in range(total_batches):
+        new_arr[ii] = arr[indices[:, repeats_per_batch * ii : repeats_per_batch * (ii+1)].ravel()].reshape(batch_size, total_features)
+
+    return new_arr
+
+
+def shuffle_samples_across_batches(arr):
+    """
+    Shuffle samples across batches.
+
+    Arguments:
+    ---------
+    arr -- (total batches, total samples, total features) ndarray.
+
+    Returns:
+    --------
+    shuffled -- (total batches, total samples, total features) ndarray.
+
+    """
+
+    total_batches, total_samples, total_features = arr.shape
+    shuffled = np.zeros_like(arr)
+    for ii in range(total_samples):
+        shuffled[:,ii,:] = _shuffle(arr[:,ii,:])
+
+    return shuffled
+
+
+def _shuffle(arr):
     idx = np.arange(len(arr))
     np.random.shuffle(idx)
     arr = arr[idx]
@@ -212,8 +263,7 @@ def characterise_model(model, init_params,
 
         print("Repetition {} / {}".format(rep+1, total_repetitions))
 
-        inputs_train  = shuffle(inputs_train.reshape(-1, total_input_features))
-        inputs_train  = make_batches(inputs_train, batch_size)
+        inputs_train = shuffle_samples_across_batches(inputs_train)
 
         loss[rep] = ann.train(inputs_train, inputs_test, test_at, test_params, **train_params)
 

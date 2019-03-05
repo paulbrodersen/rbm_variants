@@ -17,7 +17,7 @@ from rbm_variants import (LogisticLayer, BoltzmannLayer,
                           SparselyActiveDirectedRBM,
 )
 
-from utils import (rescale, make_batches, characterise_model,
+from utils import (rescale, make_batches, make_balanced_batches, characterise_model,
                    subplots, get_unblockedshaped,
                    get_cosine_similarity, get_mean_squared_error
 )
@@ -256,14 +256,14 @@ if __name__ == '__main__':
 
     ddir = '../data/mldata'
 
-    inputs_train, _ = load_mnist(ddir, 'train')
-    inputs_test,  _ = load_mnist(ddir, 'test')
+    inputs_train, labels_train = load_mnist(ddir, 'train')
+    inputs_test,  _            = load_mnist(ddir, 'test')
 
     inputs_train = rescale(inputs_train, 0., 1.)
     inputs_test  = rescale(inputs_test,  0., 1.)
 
     batch_size = 100
-    inputs_train  = make_batches(inputs_train, batch_size)
+    inputs_train  = make_balanced_batches(inputs_train, labels_train, batch_size)
 
     total_epochs = 10
     test_at = np.r_[[0, 1, 3, 6, 10, 30, 60, 100, 300], np.arange(1, total_epochs+1) * 600] # in batches
