@@ -230,14 +230,11 @@ def characterise_model(model, init_params,
                        train_params, test_params,
                        inputs_train, inputs_test,
                        test_at,
-                       total_batches=None,
                        total_repetitions=3,
                        return_anns=False):
 
-    total_train_batches, batch_size, total_input_features = inputs_train.shape
+    total_batches, batch_size, total_input_features = inputs_train.shape
 
-    if total_batches is None:
-        total_batches = total_train_batches
 
     total_layers = len(init_params['layers'])
     loss   = np.full((total_repetitions, len(test_at) * (total_layers -1)), np.nan) # output array
