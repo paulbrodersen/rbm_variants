@@ -315,6 +315,7 @@ if __name__ == '__main__':
 
         if np.any(samples==0):
             # break the line at whenever we return to x = 0
+            samples = samples.astype(np.float)
             samples[samples==0] = np.nan
             # show first data point if x-axis is log-scaled
             if samples[0] == 0:
