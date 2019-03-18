@@ -121,9 +121,10 @@ def make_diagnostic_plots(forward_pass_activities,
     ax1.set_xlabel('Weight value [AU]')
     ax2.set_xlabel('Weight value [AU]')
 
+    extremum = 10
     for ax in axes.ravel():
         # ax.set_xlim(-5, 5)
-        ax.set_xlim(-10, 10)
+        ax.set_xlim(-extremum, extremum)
         ax.set_ylim(0, 120 * 1e+3)
 
     fig.tight_layout()
@@ -148,8 +149,8 @@ def make_diagnostic_plots(forward_pass_activities,
 
     ax.set_xlabel('Forward weight value [AU]')
     ax.set_ylabel('Backward weight value [AU]')
-    ax.set_xlim(-1, 1)
-    ax.set_ylim(-1, 1)
+    ax.set_xlim(-extremum, extremum)
+    ax.set_ylim(-extremum, extremum)
 
     fig.tight_layout()
     fig.savefig(fdir + "weight_alignment.pdf")
@@ -158,7 +159,6 @@ def make_diagnostic_plots(forward_pass_activities,
     # --------------------------------------------------------------------------------
     # distribution of biases
 
-    extremum = 10
     fig, axes = plt.subplots(total_layers, sharex=True, sharey=True)
     for ii in range(total_layers):
         # axes[ii].hist(layers[ii].biases, color=color)
