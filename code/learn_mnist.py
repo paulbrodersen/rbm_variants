@@ -147,7 +147,6 @@ def make_diagnostic_plots(forward_pass_activities,
                 '.', markersize=1, color=color, alpha=0.1,
                 rasterized=True)
 
-    for ax in axes.ravel():
         ax.set_xlabel('Forward weight value [AU]')
         ax.set_ylabel('Backward weight value [AU]')
         ax.set_xlim(-extremum, extremum)
