@@ -266,7 +266,7 @@ class RestrictedBoltzmannMachine(object):
 
         return loss.ravel()
 
-    def _test(self, inputs, layers, loss_function, plot_function):
+    def _test(self, inputs, layers, loss_function):
 
         forward_pass_activities, backward_pass_activities = self._run(inputs, layers, cd=1)
 
@@ -274,8 +274,8 @@ class RestrictedBoltzmannMachine(object):
         b = backward_pass_activities[0] # samples x features
         loss_by_sample = loss_function(a, b, axis=-1)
 
-        if plot_function:
-            plot_function(forward_pass_activities, backward_pass_activities, layers)
+        if hasattr(self, 'plot'):
+            self.plot(forward_pass_activities, backward_pass_activities, layers)
 
         return loss_by_sample.mean()
 

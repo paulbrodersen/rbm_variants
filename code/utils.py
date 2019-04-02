@@ -229,6 +229,7 @@ def _shuffle(arr):
 def characterise_model(model, init_params, train_params, test_params,
                        inputs_train, inputs_test,
                        test_at           = None,
+                       plotter           = None,
                        total_repetitions = 3,
                        return_anns       = False):
 
@@ -247,6 +248,7 @@ def characterise_model(model, init_params, train_params, test_params,
         tic = time.time()
 
         ann = model(**init_params)
+        ann.plot = plotter()
 
         if rep == 0: # print model specifications
             print
@@ -285,8 +287,11 @@ def subplots(nrows=1, ncols=1, *args, **kwargs):
     Make plt.subplots return an array of axes even is there is only one axis.
     """
     import matplotlib.pyplot as plt
-
     fig, axes = plt.subplots(nrows, ncols, *args, **kwargs)
-    if nrows==1 and ncols==1:
-        axes = np.array([axes])
-    return fig, axes
+    return fig, np.reshape(axes, (nrows, ncols))
+
+
+def nanhist(values, ax=None, *args, **kwargs):
+    if ax is None:
+        ax = plt.gca()
+    return ax.hist(values[~np.isnan(values)], *args, **kwargs)

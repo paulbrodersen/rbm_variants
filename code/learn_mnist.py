@@ -19,13 +19,16 @@ from rbm_variants import (LogisticLayer, BoltzmannLayer,
 
 from utils import (rescale, make_batches, make_balanced_batches, characterise_model,
                    subplots, get_unblockedshaped,
-                   get_cosine_similarity, get_mean_squared_error
+                   get_cosine_similarity, get_mean_squared_error,
+                   nanhist,
 )
 
 # styling
 import matplotlib as mpl
 mpl.rcParams['axes.spines.top'] = False
 mpl.rcParams['axes.spines.right'] = False
+
+DEFAULT_COLOR = '#1f77b4'
 
 
 def load_mnist(ddir='../data/mldata', mode='train'):
@@ -49,204 +52,365 @@ def load_mnist(ddir='../data/mldata', mode='train'):
     return inputs, targets
 
 
-def make_diagnostic_plots(forward_pass_activities,
-                          backward_pass_activities,
-                          layers, color='#1f77b4',
-                          fdir='../figures/'):
+class DiagnosticPlotter(object):
     """
-    This function is called on each RBM test and produces figures for various RBM properties at that stage of training:
-        - distribution of activities
-        - distribution of weights
-        - forward vs backward weights ("weight alignment")
-        - distribution of biases
-        - input reconstructions
-        - receptive fields
-        - backward weights grouped by hidden neurons
-        - forward weights grouped by hidden neuron
+    Create diagnostic plots that describe
+    - the current state of the RBM, and
+    - changes therein over time.
     """
 
-    total_layers = len(layers)
+    def __init__(self, samples_trained, layers, figure_directory='../figures/', *args, **kwargs):
 
-    # --------------------------------------------------------------------------------
-    # activity profile
+        # house keeping
+        self.layers = layers
 
-    fig, axes = plt.subplots(total_layers, 2, sharex=True, sharey=True)
-    for ii, activities in enumerate([forward_pass_activities, backward_pass_activities]):
-        for jj, activity in enumerate(activities):
-            axes[jj, ii].hist(np.mean(activity, axis=0),
-                              bins=np.linspace(0., 1., 11),
-                              color=color) # across stimuli
-            p = np.mean(activity)
-            axes[jj, ii].axvline(p, 0, 1, color='k', ls='--', alpha=0.1)
-            axes[jj, ii].annotate(r'$p = {:.3f}$'.format(p), (p, 0.8),
-                                  xycoords='axes fraction',
-                                  horizontalalignment='center')
-            axes[jj,  0].set_ylabel('Number of units (layer {})'.format(jj))
-
-    axes[0,0].set_title("Data phase")
-    axes[0,1].set_title("Model phase")
-    axes[-1, 0].set_xlabel('Fraction of samples ON')
-    axes[-1, 1].set_xlabel('Fraction of samples ON')
-
-    for ax in axes.ravel():
-        ax.set_xlim(0., 1.)
-        ax.set_ylim(0, 500)
-
-    fig.tight_layout()
-    fig.savefig(fdir + "activity_distribution.pdf")
-    fig.savefig(fdir + "activity_distribution.svg")
-
-    # --------------------------------------------------------------------------------
-    # weight distribution
-
-    fig, axes = plt.subplots(total_layers-1, 2, sharex=True, sharey=True)
-    for ii in range(total_layers-1):
-
-        if total_layers-1 == 1:
-            ax1, ax2 = axes
+        # if the number of layers exceeds 2,
+        # the full training is run one additional time for each additional layers;
+        if len(layers) == 2:
+            self.samples_trained = samples_trained
         else:
-            ax1, ax2 = axes[ii]
+            self.samples_trained = np.concatenate([samples_trained + np.max(samples_trained) * ii for ii in range(len(layers)-1)])
+        self.figure_directory = figure_directory
+        self.args = args
+        self.kwargs = kwargs
 
-        if ii == 0:
-            ax1.set_title("Forward weights")
-            ax2.set_title("Backward weights")
-        ax1.set_ylabel("Number of weights from layer {} to layer {}".format(ii, ii+1))
+        # initialise data structures
+        self._initialize_history(total_tests=len(self.samples_trained))
 
-        # ax1.hist(layers[ii].forward_weights.ravel(), bins=np.linspace(-5, 5, 11), color=color)
-        # ax2.hist(layers[ii+1].backward_weights.ravel(), bins=np.linspace(-5, 5, 11), color=color)
+    def _initialize_history(self, total_tests=100):
+        """
+        Keep track of
+        - weights
+        - biases
+        - forward and backward pass activities
+        """
+        self._initialize_weights_history(total_tests)
+        self._initialize_biases_history(total_tests)
+        self._initialize_activity_history(total_tests)
+        # self._initialize_loss_history(total_tests)
+        self.ptr = 0  # `_update_history` increments ctr by one but is called before plotting routines
 
-        ax1.hist(layers[ii].forward_weights.ravel(), bins=np.linspace(-10, 10, 21), color=color)
-        ax2.hist(layers[ii+1].backward_weights.ravel(), bins=np.linspace(-10, 10, 21), color=color)
+    def _initialize_weights_history(self, total_tests):
+        for ii in range(len(self.layers)-1):
+            self.layers[ii].forward_weights_history    = np.full((total_tests, self.layers[ii].count, self.layers[ii+1].count), np.nan)
+            self.layers[ii+1].backward_weights_history = np.full((total_tests, self.layers[ii+1].count, self.layers[ii].count), np.nan)
 
-    ax1.set_xlabel('Weight value [AU]')
-    ax2.set_xlabel('Weight value [AU]')
+    def _initialize_biases_history(self, total_tests):
+        for ii in range(len(self.layers)):
+            self.layers[ii].biases_history = np.full((total_tests, self.layers[ii].count), np.nan)
 
-    extremum = 10
-    for ax in axes.ravel():
-        # ax.set_xlim(-5, 5)
-        ax.set_xlim(-extremum, extremum)
-        ax.set_ylim(0, 120 * 1e+3)
+    def _initialize_activity_history(self, total_tests):
+        for ii in range(len(self.layers)):
+            self.layers[ii].forward_pass_activity_history = np.full((total_tests, self.layers[ii].count), np.nan)
+            self.layers[ii].backward_pass_activity_history = np.full((total_tests, self.layers[ii].count), np.nan)
 
-    fig.tight_layout()
-    fig.savefig(fdir + "weight_distribution.pdf")
-    fig.savefig(fdir + "weight_distribution.svg")
+    def _initialize_loss(self, total_tests):
+        self.loss = np.full((len(self.layers)-1, len(test_at)), np.nan)
 
-    # --------------------------------------------------------------------------------
-    # weight alignment
+    def __call__(self, forward_pass_activities, backward_pass_activities, layers):
 
-    fig, axes = plt.subplots(total_layers-1, 1)
-    for ii in range(total_layers-1):
+        self._update_history(layers,
+                             forward_pass_activities,
+                             backward_pass_activities)
+        self.plot_state()
+        self.plot_history()
+        self.plot_reconstructions(forward_pass_activities[0],
+                                  backward_pass_activities[0])
 
-        if total_layers-1 == 1:
-            ax = axes
-        else:
-            ax = axes[ii]
+        self.ptr += 1
 
-        ax.plot(layers[ii].forward_weights.ravel(),
-                layers[ii+1].backward_weights.transpose().ravel(),
-                '.', markersize=1, color=color, alpha=0.1,
-                rasterized=True)
+    def _update_history(self, layers, forward_pass_activities, backward_pass_activities):
+        self._update_weights_history(self.ptr, layers)
+        self._update_biases_history(self.ptr, layers)
+        self._update_activity_history(self.ptr, layers,
+                                      forward_pass_activities,
+                                      backward_pass_activities)
 
-        ax.set_xlabel('Forward weight value [AU]')
-        ax.set_ylabel('Backward weight value [AU]')
-        ax.set_xlim(-extremum, extremum)
-        ax.set_ylim(-extremum, extremum)
 
-    fig.tight_layout()
-    fig.savefig(fdir + "weight_alignment.pdf")
-    fig.savefig(fdir + "weight_alignment.svg")
+    def _update_weights_history(self, ptr, layers):
+        for ii in range(len(layers)-1):
+            self.layers[ii].forward_weights_history[ptr]    = layers[ii].forward_weights
+            self.layers[ii+1].backward_weights_history[ptr] = layers[ii+1].backward_weights
 
-    # --------------------------------------------------------------------------------
-    # distribution of biases
+    def _update_biases_history(self, ptr, layers):
+        for ii in range(len(layers)):
+            self.layers[ii].biases_history[ptr] = layers[ii].biases
 
-    fig, axes = plt.subplots(total_layers, sharex=True, sharey=True)
-    for ii in range(total_layers):
-        # axes[ii].hist(layers[ii].biases, color=color)
-        axes[ii].hist(layers[ii].biases, bins=np.linspace(-extremum, extremum, 2*extremum+1), color=color)
-        axes[ii].set_ylabel('Number of biases (layer {})'.format(ii))
-    axes[ii].set_xlabel('Bias value [AU]')
+    def _update_activity_history(self, ptr, layers, forward_pass_activities, backward_pass_activities):
+        for ii in range(len(layers)):
+            self.layers[ii].forward_pass_activity_history[ptr] = np.mean(forward_pass_activities[ii], axis=0)
+            self.layers[ii].backward_pass_activity_history[ptr] = np.mean(backward_pass_activities[ii], axis=0)
 
-    for ax in axes.ravel():
-        # ax.set_xlim(-extremum, extremum)
-        ax.set_ylim(0, 400)
+    def plot_state(self):
+        self.plot_weights()
+        self.plot_biases()
+        self.plot_weight_alignment()
+        self.plot_activity()
 
-    fig.tight_layout()
-    fig.savefig(fdir + "bias_distribution.pdf")
-    fig.savefig(fdir + "bias_distribution.svg")
+    def plot_weights(self,
+                     bins=np.linspace(-10, 10, 21),
+                     color=DEFAULT_COLOR,
+                     xlim=(-10, 10),
+                     ylim=(0, 120 * 1e+3),
+                     figure_name='weight_distribution'):
+        """
+        Plot current weight distribution by layer.
+        """
 
-    # --------------------------------------------------------------------------------
-    # inputs and reconstructions
+        fig, axes = subplots(len(self.layers)-1, 2, sharex=True, sharey=True)
 
-    inputs = forward_pass_activities[0]
-    outputs = backward_pass_activities[0]
-    image_shape = (10, 10) # in tiles
-    tile_shape = (28, 28) # in pixels
-    total_samples  = image_shape[0] * image_shape[1]
+        for ii, (ax1, ax2) in enumerate(axes):
+            nanhist(self.layers[ii].forward_weights_history[self.ptr].ravel(), bins=bins, color=color, ax=ax1)
+            nanhist(self.layers[ii+1].backward_weights_history[self.ptr].ravel(), bins=bins, color=color, ax=ax2)
 
-    fig, axes = plt.subplots(1, 2)
-    for ax, arr in zip(axes, (inputs, outputs)):
-        arr = arr[:total_samples]
-        img = get_unblockedshaped(arr, tile_shape, image_shape)
-        ax.imshow(img, cmap='gray', vmin=0., vmax=1.)
-        ax.set_xticks([])
-        ax.set_yticks([])
+        # label axes
+        axes[ 0, 0].set_title("Forward weights")
+        axes[ 0, 1].set_title("Backward weights")
+        axes[-1, 0].set_xlabel('Weight value [AU]')
+        axes[-1, 1].set_xlabel('Weight value [AU]')
+        for ii, ax in enumerate(axes[:, 0]):
+            ax.set_ylabel("Number of weights\nfrom layer {} to layer {}".format(ii, ii+1))
 
-    axes[0].set_title('Data')
-    axes[1].set_title('Reconstruction')
+        # set axis limits
+        for ax in axes.ravel():
+            ax.set_xlim(*xlim)
+            ax.set_ylim(*ylim)
+        fig.tight_layout()
 
-    fig.tight_layout()
-    fig.savefig(fdir + "reconstructions.pdf")
-    fig.savefig(fdir + "reconstructions.svg")
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
 
-    # # --------------------------------------------------------------------------------
-    # # average input to which each hidden neuron responds to ("receptive fields")
-    # # NB: this code only works for two layers!
+    def plot_biases(self,
+                    bins=np.linspace(-10, 10, 21),
+                    color=DEFAULT_COLOR,
+                    xlim=(-10, 10),
+                    ylim=(0, 400),
+                    figure_name='bias_distribution'):
+        """
+        Plot current distribution of biases.
+        """
 
-    # visible_activity, hidden_activity = forward_pass_activities
-    # mean_stimulus_response = np.dot(visible_activity.T, hidden_activity)
-    # reshaped = get_unblockedshaped(mean_stimulus_response.T, (28,28), (20, 20)) # TODO don't hardcode MNIST and 400 unit hidden layer
+        fig, axes = plt.subplots(len(self.layers), sharex=True, sharey=True)
+        for ii, ax in enumerate(axes):
+            nanhist(self.layers[ii].biases_history[self.ptr], bins=bins, color=color, ax=ax)
 
-    # fig, ax = plt.subplots(1,1)
-    # ax.imshow(reshaped, cmap='gray')
-    # ax.set_xticks([])
-    # ax.set_yticks([])
-    # fig.tight_layout()
-    # fig.savefig(fdir + "mean_stimulus_response.pdf")
-    # fig.savefig(fdir + "mean_stimulus_response.svg")
+        # label axes
+        for ii, ax in enumerate(axes):
+            ax.set_ylabel('Layer {}\nNumber of biases'.format(ii))
+        axes[-1].set_xlabel('Bias value [AU]')
 
-    # # --------------------------------------------------------------------------------
-    # # weights of each hidden neuron to input features
-    # # NB: this code only works for two layers!
+        # set axis limits
+        for ax in axes.ravel():
+            ax.set_xlim(*xlim)
+            ax.set_ylim(*ylim)
+        fig.tight_layout()
 
-    # backward_weights = layers[-1].backward_weights
-    # reshaped = get_unblockedshaped(backward_weights, (28,28), (20, 20)) # TODO don't hardcode MNIST and 400 unit hidden layer
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
 
-    # fig, ax = plt.subplots(1,1)
-    # ax.imshow(reshaped, cmap='gray')
-    # ax.set_xticks([])
-    # ax.set_yticks([])
-    # fig.tight_layout()
-    # fig.savefig(fdir + "backward_weights.pdf")
-    # fig.savefig(fdir + "backward_weights.svg")
+    def plot_activity(self,
+                      bins=np.linspace(0., 1., 11),
+                      color=DEFAULT_COLOR,
+                      xlim=(0, 1),
+                      ylim=(0, 500),
+                      figure_name="activity_distribution"):
+        """
+        Plot current activity distribution by layer.
+        """
 
-    # # --------------------------------------------------------------------------------
-    # # weights from visible neurons to each hidden neuron
+        fig, axes = plt.subplots(len(self.layers), 2, sharex=True, sharey=True)
+        for ii, layer in enumerate(self.layers):
+            activities = (layer.forward_pass_activity_history[self.ptr],
+                          layer.backward_pass_activity_history[self.ptr])
+            for jj, activity in enumerate(activities):
+                nanhist(activity, bins=bins, color=color, ax=axes[ii, jj])
+                # annotate mean
+                p = np.mean(activity)
+                axes[ii, jj].axvline(p, 0, 1, color='k', ls='--', alpha=0.1)
+                axes[ii, jj].annotate(r'$p = {:.3f}$'.format(p), (p, 0.8),
+                                      xycoords='axes fraction',
+                                      horizontalalignment='center')
 
-    # forward_weights = layers[0].forward_weights
-    # reshaped = get_unblockedshaped(forward_weights.T, (28,28), (20, 20)) # TODO don't hardcode MNIST and 400 unit hidden layer
+        # label axes
+        axes[ 0, 0].set_title("Data phase")
+        axes[ 0, 1].set_title("Model phase")
+        axes[-1, 0].set_xlabel('Fraction of samples ON')
+        axes[-1, 1].set_xlabel('Fraction of samples ON')
+        for ii, ax in enumerate(axes[:, 0]):
+            ax.set_ylabel('Layer {}\nNumber of units'.format(ii))
 
-    # fig, ax = plt.subplots(1,1)
-    # ax.imshow(reshaped, cmap='gray')
-    # ax.set_xticks([])
-    # ax.set_yticks([])
-    # fig.tight_layout()
-    # fig.savefig(fdir + "forward_weights.pdf")
-    # fig.savefig(fdir + "forward_weights.svg")
+        # set axis limits
+        for ax in axes.ravel():
+            ax.set_xlim(*xlim)
+            ax.set_ylim(*ylim)
+        fig.tight_layout()
 
-    # plt.ion()
-    # plt.show()
-    # raw_input("Press any key to close figures...")
-    plt.close('all')
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
+    def plot_weight_alignment(self,
+                      color=DEFAULT_COLOR,
+                      xlim=(-10, 10),
+                      ylim=(-10, 10),
+                      figure_name="weight_alignment"):
+
+        fig, axes = subplots(len(self.layers)-1, 1)
+        for ii, ax in enumerate(axes.ravel()):
+            ax.plot(self.layers[ii].forward_weights_history[self.ptr].ravel(),
+                    self.layers[ii+1].backward_weights_history[self.ptr].transpose().ravel(),
+                    '.', markersize=1, color=color, alpha=0.1,
+                    rasterized=True)
+
+        for ax in axes.ravel():
+            ax.set_xlabel('Forward weights [AU]')
+            ax.set_ylabel('Backward weights [AU]')
+
+        # set axis limits
+        for ax in axes.ravel():
+            ax.set_xlim(*xlim)
+            ax.set_ylim(*ylim)
+        fig.tight_layout()
+
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
+    def plot_history(self):
+        self.plot_weights_history()
+        self.plot_biases_history()
+        self.plot_activity_history()
+        # self.plot_weight_alignment_history()
+
+    def plot_weights_history(self, color=DEFAULT_COLOR, figure_name='weight_history'):
+
+        fig, axes = subplots(len(self.layers)-1, 2, sharex=True, sharey=True)
+        for ii, ax in enumerate(axes):
+            plot_distribution_over_time(self.samples_trained[:self.ptr+1],
+                                        self.layers[ii].forward_weights_history[:self.ptr+1].reshape(self.ptr+1, -1),
+                                        color=color,
+                                        ax=axes[ii, 0])
+            plot_distribution_over_time(self.samples_trained[:self.ptr+1],
+                                        self.layers[ii+1].backward_weights_history[:self.ptr+1].reshape(self.ptr+1, -1),
+                                        color=color,
+                                        ax=axes[ii, 1])
+
+        # label axes
+        axes[ 0, 0].set_title("Forward weights")
+        axes[ 0, 1].set_title("Backward weights")
+        axes[-1, 0].set_xlabel('Samples')
+        axes[-1, 1].set_xlabel('Samples')
+        for jj, ax in enumerate(axes[:, 0]):
+            ax.set_ylabel('Layer {}\nWeight [AU]'.format(jj))
+
+        fig.tight_layout()
+
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
+    def plot_biases_history(self,
+                            color=DEFAULT_COLOR,
+                            figure_name='biases_history'):
+
+        fig, axes = plt.subplots(len(self.layers), 1, sharex=True, sharey=True)
+
+        for ii, layer in enumerate(self.layers):
+            plot_distribution_over_time(self.samples_trained[:self.ptr+1],
+                                        layer.biases_history[:self.ptr+1],
+                                        color=color,
+                                        ax=axes[ii])
+
+        # label axes
+        for ii, ax in enumerate(axes):
+            ax.set_ylabel('Layer {}\nBias [AU]'.format(ii))
+        axes[-1].set_xlabel('Samples')
+
+        fig.tight_layout()
+
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
+    def plot_activity_history(self, color=DEFAULT_COLOR, figure_name='activity_history'):
+
+        fig, axes = plt.subplots(len(self.layers), 2, sharex=True, sharey=True)
+        for ii, layer in enumerate(self.layers):
+            plot_distribution_over_time(self.samples_trained[:self.ptr+1], layer.forward_pass_activity_history[:self.ptr+1], ax=axes[ii, 0])
+            plot_distribution_over_time(self.samples_trained[:self.ptr+1], layer.backward_pass_activity_history[:self.ptr+1], ax=axes[ii, 1])
+
+        # set axis limits
+        for ax in axes.ravel():
+            ax.set_ylim(0., 1.)
+
+        # label axes
+        axes[ 0, 0].set_title("Data phase")
+        axes[ 0, 1].set_title("Model phase")
+        axes[-1, 0].set_xlabel('Samples')
+        axes[-1, 1].set_xlabel('Samples')
+        for jj, ax in enumerate(axes[:, 0]):
+            ax.set_ylabel('Layer {}\nFraction of samples ON'.format(jj))
+
+        fig.tight_layout()
+
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
+
+    def plot_reconstructions(self, inputs, reconstructions,
+                             image_shape = (10, 10), # in tiles
+                             tile_shape = (28, 28), # in pixels
+                             figure_name = 'reconstructions'):
+
+        total_samples  = image_shape[0] * image_shape[1]
+
+        fig, axes = plt.subplots(1, 2)
+        for ax, arr in zip(axes, (inputs, reconstructions)):
+            arr = arr[:total_samples]
+            img = get_unblockedshaped(arr, tile_shape, image_shape)
+            ax.imshow(img, cmap='gray', vmin=0., vmax=1.)
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+        axes[0].set_title('Data')
+        axes[1].set_title('Reconstruction')
+        fig.tight_layout()
+
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
+
+def plot_distribution_over_time(time, values, percentiles=[0, 5, 25, 75, 95, 100], color=DEFAULT_COLOR, ax=None):
+    """
+    Plot a distribution of values over time.
+    Arguments:
+    ----------
+    time -- (total time points, ) ndarray
+    values -- (total time points, total values) ndarray, or list equivalent
+    percentiles -- (2 * total levels, ) iterable
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots(1,1)
+
+    percentile_values = np.array([np.nanpercentile(v, percentiles) for v in values])
+    total_levels = len(percentiles)/2
+    for ii in range(total_levels):
+        ax.fill_between(time, percentile_values[:, ii], percentile_values[:, len(percentiles)-ii-1],
+                        alpha = 1. / (total_levels + 1),
+                        color = color)
+
+    median = np.nanmedian(values, axis=1)
+    ax.plot(time, median, color=color)
+
+
+def test_plot_distribution_over_time():
+    total_time_points = 10
+    total_values = 1000
+    values = np.random.randn(total_time_points, total_values)
+    # increase variance over time
+    values *= (np.arange(total_time_points)[:, None] + 1)
+    # shift mean upwards over time
+    values += np.arange(total_time_points)[:, None]
+    # plot
+    plot_distribution_over_time(np.arange(total_time_points), values)
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -290,9 +454,19 @@ if __name__ == '__main__':
     # loop over experiments and populate plot
     for ii, (model, init_params, train_params, color, label, fname) in enumerate(experiments):
 
-        test_params = dict(loss_function=get_mean_squared_error,
-                           # plot_function=None)
-                           plot_function=partial(make_diagnostic_plots, color=color, fdir='../figures/tmp/'+fname+'_'))
+        # test_params = dict(loss_function=get_mean_squared_error,
+        #                    plot_function = DiagnosticPlotter(
+        #                        samples_trained=test_at,
+        #                        layers=init_params['layers'],
+        #                        color=color,
+        #                        figure_directory='../figures/tmp/'+fname+'_'))
+        test_params = dict(loss_function=get_mean_squared_error)
+        plotter = partial(DiagnosticPlotter,
+                          samples_trained=test_at,
+                          layers=init_params['layers'],
+                          color=color,
+                          figure_directory='../figures/tmp/'+fname+'_')
+
 
         loss, samples = characterise_model(model             = model,
                                            init_params       = init_params,
@@ -301,6 +475,7 @@ if __name__ == '__main__':
                                            inputs_train      = inputs_train,
                                            inputs_test       = inputs_test,
                                            test_at           = test_at,
+                                           plotter           = plotter,
                                            total_repetitions = 3)
 
         np.savez('../data/results_' + fname,
