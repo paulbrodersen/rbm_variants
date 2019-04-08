@@ -32,7 +32,8 @@ experiments = []
 #                         dict(cd=3, eta=0.01),
 #                         colors[ii], '$|w| = {}$'.format(s), 'test_{}'.format(ii)])
 
-for ii, v in enumerate([0.001, 0.005, 0.01, 0.05, 0.1, 0.5]):
+# for ii, v in enumerate([0.001, 0.005, 0.01, 0.05, 0.1, 0.5]):
+for ii, v in enumerate([0.1, 0.5]):
     experiments.append([RestrictedBoltzmannMachine,
                         dict(scale_weights_by=1., **network_layout),
                         dict(cd=3, eta=v),
