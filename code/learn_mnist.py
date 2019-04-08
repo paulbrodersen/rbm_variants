@@ -77,6 +77,14 @@ class DiagnosticPlotter(object):
         # initialise data structures
         self._initialize_history(total_tests=len(self.samples_trained))
 
+        # some figures only plot samples of the data as the memory requirements
+        # for plotting all the data are prohibitive; here we define the samples
+        # that we keep showing
+        total_samples = 100
+        self.selected_biases = [np.random.choice(layer.count, total_samples) for layer in self.layers]
+        self.selected_weights = [np.random.choice(self.layers[ii].count*self.layers[ii+1].count, total_samples) for ii in range(len(self.layers)-1)]
+
+
     def _initialize_history(self, total_tests=100):
         """
         Keep track of
@@ -275,12 +283,16 @@ class DiagnosticPlotter(object):
         fig.savefig(self.figure_directory + figure_name + ".svg")
 
     def plot_history(self):
-        self.plot_weights_history()
-        self.plot_biases_history()
+        self.plot_individual_weights_history()
+        self.plot_aggregate_weights_history()
+        self.plot_individual_biases_history()
+        self.plot_aggregate_biases_history()
         self.plot_activity_history()
         # self.plot_weight_alignment_history()
+        plt.close('all')
 
-    def plot_weights_history(self, color=DEFAULT_COLOR, figure_name='weight_history'):
+
+    def plot_aggregate_weights_history(self, color=DEFAULT_COLOR, figure_name='aggregate_weight_history'):
 
         fig, axes = subplots(len(self.layers)-1, 2, sharex=True, sharey=True)
         for ii, ax in enumerate(axes):
@@ -306,9 +318,37 @@ class DiagnosticPlotter(object):
         fig.savefig(self.figure_directory + figure_name + ".pdf")
         fig.savefig(self.figure_directory + figure_name + ".svg")
 
-    def plot_biases_history(self,
+
+    def plot_individual_weights_history(self, color=DEFAULT_COLOR, figure_name='individual_weight_history'):
+
+        fig, axes = subplots(len(self.layers)-1, 2, sharex=True, sharey=True)
+        for ii, ax in enumerate(axes):
+            plot_over_time(self.samples_trained[:self.ptr+1],
+                           self.layers[ii].forward_weights_history[:self.ptr+1].reshape(self.ptr+1, -1)[:, self.selected_weights[ii]],
+                           color=color,
+                           ax=axes[ii, 0])
+            plot_over_time(self.samples_trained[:self.ptr+1],
+                           self.layers[ii+1].backward_weights_history[:self.ptr+1].reshape(self.ptr+1, -1)[:, self.selected_weights[ii]],
+                           color=color,
+                           ax=axes[ii, 1])
+
+        # label axes
+        axes[ 0, 0].set_title("Forward weights")
+        axes[ 0, 1].set_title("Backward weights")
+        axes[-1, 0].set_xlabel('Samples')
+        axes[-1, 1].set_xlabel('Samples')
+        for jj, ax in enumerate(axes[:, 0]):
+            ax.set_ylabel('Layer {}\nWeight [AU]'.format(jj))
+
+        fig.tight_layout()
+
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
+
+    def plot_aggregate_biases_history(self,
                             color=DEFAULT_COLOR,
-                            figure_name='biases_history'):
+                            figure_name='aggregate_biases_history'):
 
         fig, axes = plt.subplots(len(self.layers), 1, sharex=True, sharey=True)
 
@@ -327,6 +367,30 @@ class DiagnosticPlotter(object):
 
         fig.savefig(self.figure_directory + figure_name + ".pdf")
         fig.savefig(self.figure_directory + figure_name + ".svg")
+
+
+    def plot_individual_biases_history(self,
+                            color=DEFAULT_COLOR,
+                            figure_name='individual_biases_history'):
+
+        fig, axes = plt.subplots(len(self.layers), 1, sharex=True, sharey=True)
+
+        for ii, layer in enumerate(self.layers):
+            plot_over_time(self.samples_trained[:self.ptr+1],
+                           layer.biases_history[:self.ptr+1][:, self.selected_biases[ii]],
+                           color=color,
+                           ax=axes[ii])
+
+        # label axes
+        for ii, ax in enumerate(axes):
+            ax.set_ylabel('Layer {}\nBias [AU]'.format(ii))
+        axes[-1].set_xlabel('Samples')
+
+        fig.tight_layout()
+
+        fig.savefig(self.figure_directory + figure_name + ".pdf")
+        fig.savefig(self.figure_directory + figure_name + ".svg")
+
 
     def plot_activity_history(self, color=DEFAULT_COLOR, figure_name='activity_history'):
 
@@ -413,6 +477,35 @@ def test_plot_distribution_over_time():
     plt.show()
 
 
+def plot_over_time(time, values, color=DEFAULT_COLOR, ax=None):
+    """
+    Plot a individual values over time.
+    Arguments:
+    ----------
+    time -- (total time points, ) ndarray
+    values -- (total time points, total values) ndarray, or list equivalent
+    """
+
+    if ax is None:
+        fig, ax = plt.subplots(1,1)
+
+    ax.plot(np.tile(time, (values.shape[1], 1)).T, values, color=color, alpha=0.1)
+
+
+def test_plot_over_time():
+    total_time_points = 10
+    total_values = 1000
+    values = np.random.randn(total_time_points, total_values)
+    # increase variance over time
+    values *= (np.arange(total_time_points)[:, None] + 1)
+    # shift mean upwards over time
+    values += np.arange(total_time_points)[:, None]
+    # plot
+    plot_over_time(np.arange(total_time_points), values)
+    plt.show()
+
+
+
 if __name__ == '__main__':
 
     # --------------------------------------------------------------------------------
@@ -429,7 +522,7 @@ if __name__ == '__main__':
     batch_size = 10
     inputs_train  = make_balanced_batches(inputs_train, labels_train, batch_size)
 
-    total_epochs = 10
+    total_epochs = 0
     test_at = np.r_[[0, 10, 30, 60, 100, 300, 600, 1000, 3000], np.arange(1, total_epochs+1) * 6000] # in batches
 
     # --------------------------------------------------------------------------------
